@@ -60,8 +60,8 @@ for my $xsd (glob "$FindBin::Bin/../etc/*.xsd") {
 
 # redirect the endpoint as specified in the WSDL to our own server.
 my $transporter = XML::Compile::Transport::SOAPHTTP->new(
-   address    => $zimbraServices->{$service_name},
-   keep_alive => 1,
+	address    => $zimbraServices->{$service_name},
+	keep_alive => 1,
 );
 
 # enable cookies for zimbra Auth
@@ -78,10 +78,10 @@ for my $soapOp ( $wsdl->operations( port => $service_port ) ) {
 		warn $msg;
 	}
 	$soapOps->{ $soapOp->name } =
-		$wsdl->compileClient( $soapOp->name,
-								 port      => $service_port,
-								 transport => $send,
-								 service   => $service_name );
+		$wsdl->compileClient( 	$soapOp->name,
+								port      => $service_port,
+								transport => $send,
+								service   => $service_name );
 }
 
 ### call functions ### 
@@ -91,8 +91,8 @@ for my $soapOp ( $wsdl->operations( port => $service_port ) ) {
 
 call($soapOps, 
 	 authRequest, 
-	 { persistAuthTokenCookie => 1, 
-	   password => 'password', 
+	 { 	persistAuthTokenCookie => 1, 
+		password => 'password', 
 		account =>  { 
 			 by => 'name', 
 			  _ => 'admin'}} );
@@ -107,11 +107,11 @@ call($soapOps,
 print Dumper 
 call($soapOps, 
 	 getAllAccountsRequest, 
-	 { server => { 
-		   by => 'name', 
+	 { 	server => { 
+			by => 'name', 
 			_ => 'zimbra.example.com' }, 
-	   domain => { 
-		   by => 'name', 
+		domain => { 
+			by => 'name', 
 			_ => 'zimbra.example.com' }});
 
 sub call {
