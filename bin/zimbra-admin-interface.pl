@@ -84,36 +84,63 @@ for my $soapOp ( $wsdl->operations( port => $service_port ) ) {
 								service   => $service_name );
 }
 
+
+auth();
+print Dumper getAccountInfo('user@zimbra.example.com');
+print Dumper getAllAccounts();
+
+
 ### call functions ### 
 # important ... SOAP functions are starting with a lower capital,
 # instead of documented at 
 # http://wiki.zimbra.com/wiki/SOAP_API_Reference_Material_Beginning_with_ZCS_8.0
+sub auth {
+	call($soapOps, 
+		 'authRequest', 
+		 { persistAuthTokenCookie => 1, 
+		   password => 'PASSWORD', 
+			account =>  { 
+				 by => 'name', 
+				  _ => 'admin'}} );
+}
 
-call($soapOps, 
-	 authRequest, 
-	 { 	persistAuthTokenCookie => 1, 
-		password => 'password', 
-		account =>  { 
-			 by => 'name', 
-			  _ => 'admin'}} );
+sub getAccountInfo {
+	my $user = shift;
+	my $ret;
+	$ret = call($soapOps, 
+		 'getAccountInfoRequest', 
+		 { account => { 
+					by => 'name', 
+					_  => $user}});
+	return $ret;
+}
 
-print Dumper 
-call($soapOps, 
-	 getAccountInfoRequest, 
-	 { account => { 
-			by => 'name', 
-			_  => 'user@zimbra.example.com'}});
+sub getAllAccounts {
+	my $allAccounts = 
+	call($soapOps, 
+		 'getAllAccountsRequest', 
+		 { server => { 
+				   by => 'name', 
+					_ => 'zimbra.example.com' }, 
+		   domain => { 
+				   by => 'name', 
+					_ => 'zimbra.example.com' }});
 
-print Dumper 
-call($soapOps, 
-	 getAllAccountsRequest, 
-	 { 	server => { 
-			by => 'name', 
-			_ => 'zimbra.example.com' }, 
-		domain => { 
-			by => 'name', 
-			_ => 'zimbra.example.com' }});
+	my $accounts;
+	for my $za ( @{ $allAccounts->{account} } ) {
+		my $name = $za->{name};
+		my $id = $za->{id};
+		my %kv = map { $_->{'n'} => $_->{'_'} } @{$za->{a}};
+		$accounts->{$name} = {
+			'name' => $name,
+			'id' => $id,
+			'kv' => \%kv,
+		}
+	}
+	return $accounts;
+}
 
+### generic call function ###	
 sub call {
 	my ($soapOps, $action, $args) = @_;    
 	my %argHash;
@@ -124,9 +151,6 @@ sub call {
 	#warn Dumper ("call(): trace=", $trace);
 	return $response->{parameters};
 }
-
-
-
 
 __END__
 
