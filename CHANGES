@@ -1,0 +1,10 @@
+2014-03-19 - rplessl - initial Mojo App
+
+2014-03-19 - rplessl - rewritten tool to run faster
+                       faster will be done by using and daemon
+                       idea: use Mojolicious Perl daemon and 
+                       communicate with REST interface to communicator
+                        
+
+2014-03-19 - rplessl - initial SOAP tool 
+		       proof of concept

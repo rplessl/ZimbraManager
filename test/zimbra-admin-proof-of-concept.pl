@@ -22,6 +22,7 @@ my $wsdlFile = "$FindBin::Bin/../etc/ZimbraService.wsdl";
 if ($debug) { 
 	warn "wsdlFile=$wsdlFile";
 }
+
 my $wsdlXml = XML::LibXML->new->parse_file($wsdlFile);
 
 my $zimbraServices;
@@ -83,7 +84,6 @@ for my $soapOp ( $wsdl->operations( port => $service_port ) ) {
 								transport => $send,
 								service   => $service_name );
 }
-
 
 auth();
 print Dumper getAccountInfo('user@zimbra.example.com');
@@ -156,7 +156,7 @@ __END__
 
 =head1 NAME
 
-zimbra-admin-interface.pl - access administative tools of zimbra with perl
+zimbra-admin-proof-of-concept.pl - access administative tools of zimbra with perl
 
 =head1 SYNOPSIS
 

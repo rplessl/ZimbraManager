@@ -8,6 +8,7 @@ for module in \
   XML::Compile::SOAP11 \
   XML::Compile::Transport::SOAPHTTP \
   Net::HTTP \
+  Mojolicious \
 ; do
   perlmodule $module
 done
