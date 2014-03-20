@@ -50,7 +50,7 @@ sub startup {
   			}
   		}
   		$self->renderOutput($ctrl, $ret, $err, $plain);
-  	})
+  	});
 
 	$r->post('/:call' => sub {
 		my $ctrl  = shift;
@@ -61,9 +61,9 @@ sub startup {
 		my $err;
 
 		my $perl_args = decode_json($json_args);
-		($ret, $err) = $self->soap->call($call, $params);
+		($ret, $err) = $self->soap->call($call, $perl_args);
 		$self->renderOutput($ctrl, $ret, $err, $plain);
-	})
+	});
 }
 
 sub renderOutput {
@@ -72,6 +72,10 @@ sub renderOutput {
 		$ret = dumper $ret;
 	}
 	my $text = $err ? $err : $ret;
+	if ($err) {
+        $ctrl->res->code(510);
+	}
+
 	if ($plain) {
 		$ctrl->render(text => "<pre>$text</pre>") if ($plain);
 	}
