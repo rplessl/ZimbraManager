@@ -32,7 +32,7 @@ Usage
 
     $ ./bin/zimbra-manager.pl prefork
 
-    or 
+or 
 
     $ ./bin/zimbra-manager.pl daemon
 

@@ -2,6 +2,7 @@ package ZimbraManager;
 
 use Mojo::Base 'Mojolicious';
 use Mojo::Util qw(dumper);
+use Mojo::JSON qw(decode_json encode_json);
 
 use ZimbraManager::Soap;
 
@@ -50,6 +51,19 @@ sub startup {
   		}
   		$self->renderOutput($ctrl, $ret, $err, $plain);
   	})
+
+	$r->post('/:call' => sub {
+		my $ctrl  = shift;
+		my $call  = $ctrl->param('call');
+		my $plain = $ctrl->param('plain');
+		my $json_args = $ctrl->param('json_args');
+		my $ret;
+		my $err;
+
+		my $perl_args = decode_json($json_args);
+		($ret, $err) = $self->soap->call($call, $params);
+		$self->renderOutput($ctrl, $ret, $err, $plain);
+	})
 }
 
 sub renderOutput {

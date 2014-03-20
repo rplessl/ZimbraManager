@@ -26,6 +26,16 @@ B<zimbra-manager.pl> [I<options>...]
 =head1 DESCRIPTION
 
 
+Usage
+----- 
+
+    $ ./bin/zimbra-manager.pl prefork
+
+or 
+
+    $ ./bin/zimbra-manager.pl daemon
+
+
 =head1 LICENSE
 
 This program is free software: you can redistribute it and/or modify it
@@ -48,4 +58,5 @@ S<Roman Plessl E<lt>roman.plessl@oetiker.chE<gt>>
 =head1 HISTORY
 
  2014-03-19 rp Initial Version
+
 =cut
