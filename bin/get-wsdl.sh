@@ -21,18 +21,20 @@ CONFIGDIR="${BASEDIR}/../etc/wsdl"
 mkdir -p ${CONFIGDIR}
 cd ${CONFIGDIR}
 
+WGET='wget --no-check-certificate -nc'
+
 echo "download WSDLs"
-wget -nc https://${SERVER}${PORT}/service/wsdl/ZimbraAdminService.wsdl
-wget -nc https://${SERVER}${PORT}/service/wsdl/ZimbraUserService.wsdl                  
-wget -nc https://${SERVER}${PORT}/service/wsdl/ZimbraService.wsdl                   
+${WGET} https://${SERVER}${PORT}/service/wsdl/ZimbraAdminService.wsdl
+${WGET} https://${SERVER}${PORT}/service/wsdl/ZimbraUserService.wsdl                  
+${WGET} https://${SERVER}${PORT}/service/wsdl/ZimbraService.wsdl                   
 
 echo "download XSDs"
-wget -nc https://${SERVER}${PORT}/service/wsdl/zimbraAccount.xsd
-wget -nc https://${SERVER}${PORT}/service/wsdl/zimbraAdminExt.xsd
-wget -nc https://${SERVER}${PORT}/service/wsdl/zimbraAdmin.xsd
-wget -nc https://${SERVER}${PORT}/service/wsdl/zimbraMail.xsd
-wget -nc https://${SERVER}${PORT}/service/wsdl/zimbraRepl.xsd
-wget -nc https://${SERVER}${PORT}/service/wsdl/zimbraSync.xsd
-wget -nc https://${SERVER}${PORT}/service/wsdl/zimbraVoice.xsd
-wget -nc https://${SERVER}${PORT}/service/wsdl/zimbra.xsd
+${WGET} https://${SERVER}${PORT}/service/wsdl/zimbraAccount.xsd
+${WGET} https://${SERVER}${PORT}/service/wsdl/zimbraAdminExt.xsd
+${WGET} https://${SERVER}${PORT}/service/wsdl/zimbraAdmin.xsd
+${WGET} https://${SERVER}${PORT}/service/wsdl/zimbraMail.xsd
+${WGET} https://${SERVER}${PORT}/service/wsdl/zimbraRepl.xsd
+${WGET} https://${SERVER}${PORT}/service/wsdl/zimbraSync.xsd
+${WGET} https://${SERVER}${PORT}/service/wsdl/zimbraVoice.xsd
+${WGET} https://${SERVER}${PORT}/service/wsdl/zimbra.xsd
 
