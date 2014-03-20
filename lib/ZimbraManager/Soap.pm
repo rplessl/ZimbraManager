@@ -1,22 +1,32 @@
+
 package ZimbraManager::Soap;
 
 use Mojo::Base -base;
+use Mojo::Util qw(dumper);
+use Mojo::Log;
 
 use XML::Compile::WSDL11;
 use XML::Compile::SOAP11;
+use XML::Compile::SOAP::Trace;
 use XML::Compile::Transport::SOAPHTTP;
 
 use 5.14.0;
 
+
+has 'log';
+
 has 'debug' => sub {
+	my $self = shift;
 	return 0;
 };
 
 has 'mode' => sub {
+	my $self = shift;
 	return 'full';
 };
 
 has 'wsdlPath' => sub {
+	my $self = shift;
 	return "$FindBin::Bin/../etc/wsdl/";
 };
 
@@ -35,7 +45,7 @@ has 'wsdlFile' => sub {
 		}
 	}
 	if ($self->debug) { 
-		warn "wsdlFile=$wsdlFile";
+		$self->log->debug("wsdlFile=$wsdlFile");
 	}
 	return $wsdlFile;
 };
@@ -52,20 +62,12 @@ has 'wsdl' => sub {
 	my $wsdl = XML::Compile::WSDL11->new($wsdlXml);
 	for my $xsd (glob $self->wsdlPath."*.xsd") {
 		if ($self->debug) {
-			warn "XML Schema Import of file:", $xsd;
+			$self->log->debug("XML Schema Import of file:", $xsd);
 		}
 		$wsdl->importDefinitions($xsd);
 	}
 	return $wsdl;
 };
-
-# has 'service' => sub {
-# 	my $serviceName = 'zcsAdminService';
-# 	return { 
-# 		'serviceName' => $serviceName,
-# 		'servicePort' => $serviceName.'Port',
-# 	};
-# };
 
 has 'service' => sub {
 	my $self = shift;
@@ -73,11 +75,12 @@ has 'service' => sub {
 	my $zimbraServices;
 	my $wsdlServices = $wsdlXml->getElementsByTagName( 'wsdl:service' );
 	for my $service (@$wsdlServices) {
-		my $name        = $service->getAttribute( 'name' );
-		my $port        = $service->getElementsByTagName( 'wsdl:port' )->[0];	
-		my $address     = $port->getElementsByTagName( 'soap:address' )->[0];
-		my $service_uri = $address->getAttribute( 'location' );
-		   $service_uri =~ m/^(https|http):\/\/(.+?):(.+?)\//;
+		my $name         = $service->getAttribute( 'name' );
+		my $port         = $service->getElementsByTagName( 'wsdl:port' )->[0];	
+		my $port_name    = $port->getAttribute( 'name' );
+		my $address      = $port->getElementsByTagName( 'soap:address' )->[0];
+		my $uri          = $address->getAttribute( 'location' );
+		   $uri          =~ m/^(https|http):\/\/(.+?):(.+?)\//;
 		my $uri_protocol = $1;
 		my $uri_host     = $2;
 		my $uri_port     = $3;
@@ -85,15 +88,17 @@ has 'service' => sub {
 		$zimbraServices->{$name} = {
 			host           => $uri_host,
 			name           => $name,
-			port           => $uri_port,
-			protocol       => $uri_protocol,
-			uri            => $service_uri,
+			port_name      => $port_name,
+			uri            => $uri,
+			uri_host       => $uri_host,
+			uri_port       => $uri_port,
+			uri_protocol   => $uri_protocol,
 		};
 	}	
 	if ($self->debug) {
-		for my $servicename (keys %$zimbraServices) {
-			for my $k (keys %$servicename) {
-				warn "$k=", $servicename->{$k};
+		for my $servicename (keys %$zimbraServices) {	
+			for my $k (keys %{$zimbraServices->{$servicename}}) {
+				$self->log->debug("$k=", $zimbraServices->{$servicename}->{$k});
 			}
 		}
 	}
@@ -101,29 +106,33 @@ has 'service' => sub {
 };
 
 has 'adminService' => sub {
+	my $self = shift;
 	return 'zcsAdminService';
 };
 
-has 'soapOps' => sub {
+has 'soapOps' => sub {	
 	my $self = shift;
 	my $soapOps;
 
 	my $adminService = $self->adminService;
+	my $uri  = $self->service->{$adminService}->{uri};
+	my $port = $self->service->{$adminService}->{port_name};
+	my $name = $self->service->{$adminService}->{name};
 
 	# redirect the endpoint as specified in the WSDL to our own server.
 	my $transporter = XML::Compile::Transport::SOAPHTTP->new(
-		address    => $self->service->{$adminService}->{uri},
-		keep_alive => 1,
+		address    => $uri,
+		keep_alive => 1,	
 	);
 
-	# enable cookies for zimbra Auth
+	# # enable cookies for zimbra Auth
 	my $ua = $transporter->userAgent();
 	$ua->cookie_jar({ file => "$ENV{HOME}/.cookies.txt" });
 
-	my $send = $transporter->compileClient( port => $self->service->{$adminService}->{port} );
+	my $send = $transporter->compileClient( port => $port );
 
 	# Compile all service methods
-	for my $soapOp ( $self->wsdl->operations( port => $self->service->{$adminService}->{port} ) ) {
+	for my $soapOp ( $self->wsdl->operations( port => $port ) ) {
 		if ($self->debug) {
 			my $msg = sprintf "got soap operation %s", $soapOp->name;
 			warn $msg;
@@ -131,8 +140,8 @@ has 'soapOps' => sub {
 		$soapOps->{ $soapOp->name } =
 		$self->wsdl->compileClient( 
 			$soapOp->name,
-			port      => $self->service->{$adminService}->{port},
-			service   => $self->service->{$adminService}->{name},
+			port      => $port,
+			service   => $name,
 			transport => $send, 
 		);
 	}
@@ -143,17 +152,65 @@ sub call {
 	my $self = shift;
 	my $action = shift;
 	my $args = shift;
-	#my %argHash;
-	#@argHash{ keys %$args }  = values %$args;    
 
-	use Data::Dumper;
-	warn Dumper $self->soapOps;
+	$self->log->debug(dumper { action => $action, args => $args });
 
 	my ( $response, $trace ) = $self->soapOps->{$action}->($args);
-	#my ( $response, $trace ) = $self->soapOps->{$action}->(\%argHash);
-	#warn Dumper ("call(): response=", $response);
-	#warn Dumper ("call(): trace=", $trace);
-	return $response->{parameters};
+	#warn dumper ("call(): response=", $response);
+	#warn dumper ("call(): trace=", $trace);
+	my $err;	 
+	if ( $response->{Fault} ) {
+		my $error   = "SOAP ERROR from Zimbra: ". $response->{Fault}->{faultstring};
+		my $msg1    = 'response: ' . sprintf "%s", dumper $response;
+    	my $msg2    = 'trace:    ' . sprintf "%s", dumper $trace;
+	 	$err = "$error\n\n\n$msg1\n$msg2\n";
+	}
+	return ($response->{parameters}, $err);
 }
 
 1;
+
+__END__
+
+=head1 NAME
+
+Zimbra Manager - ZimbraManager::Soap.pm - A class to manage Zimbra with SOAP
+
+=head1 SYNOPSIS
+
+    use ZimbraManager::Soap;
+
+    has 'soap' => sub {
+        my $self = shift;
+        return ZimbraManager::Soap->new(
+            log => $self->log
+        );
+    };
+
+    my $ret = $self->soap->call(FUNCTION, %PARAMS));
+
+
+=head1 LICENSE
+
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option)
+any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+more details.
+
+You should have received a copy of the GNU General Public License along with
+this program.  If not, see L<http://www.gnu.org/licenses/>.
+
+=head1 AUTHOR
+
+S<Roman Plessl E<lt>roman.plessl@oetiker.chE<gt>>
+
+=head1 HISTORY
+
+ 2014-03-20 rp Initial Version
+
+=cut
