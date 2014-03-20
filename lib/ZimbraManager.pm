@@ -30,9 +30,14 @@ sub startup {
   		my $err;
   		given ($call) {
   			when ('auth') { 
-  				my $password = $ctrl->param('pw');
-  				($ret, $err) = $self->soap->call(auth($password));  				
+  				my $user = $ctrl->param('user');
+  				my $password = $ctrl->param('password');
+  				($ret, $err) = $self->soap->call(auth($user,$password));  				
   				$ret = 'Authentication sucessful!' if ($ret);  				
+  			}
+  			when ('getAccount') {
+  				my $user = $ctrl->param('user');
+  				($ret, $err) = $self->soap->call(getAccount($user));
   			}
   			when ('getAccountInfo') {
   				my $user = $ctrl->param('user');
@@ -85,14 +90,15 @@ sub renderOutput {
 }
 
 sub auth { 
- 	my $pw = shift;
+ 	my $user = shift;
+ 	my $password = shift;
  	return (
  	'authRequest', 
 	{ persistAuthTokenCookie => 1, 
-		   password => $pw, 
+		   password => $password, 
 			account =>  { 
 				 by => 'name', 
-				  _ => 'admin'}}
+				  _ => $user}}
 	);
 }
 
@@ -105,6 +111,17 @@ sub getAccountInfo {
 					_  => $user}}
 	);	
 }
+
+sub getAccount {
+	my $user = shift;	
+	return (
+		 'getAccountRequest', 
+		 { account => { 
+					by => 'name', 
+					_  => $user}}
+	);	
+}
+
 
 sub getAllAccounts {
 	my $name = shift;
@@ -155,12 +172,17 @@ Zimbra Manager - ZimbraManager - A class to manage Zimbra with SOAP
 
 Examples in Webbrowser:
 
-    http://localhost:3000/auth?pw=MyAdminPassword
+    http://localhost:3000/auth?user=adminuser&password=MyAdminPassword
 
 
     http://localhost:3000/getAccountInfo?user=roman@zimbra.example.com&plain=yes
 
     http://localhost:3000/getAccountInfo?user=roman@zimbra.example.com
+
+
+    http://localhost:3000/getAccount?user=roman@zimbra.example.com&plain=yes
+
+    http://localhost:3000/getAccount?user=roman@zimbra.example.com
 
 
     http://localhost:3000/getAllAccounts?name=zimbra.example.com&domain=zimbra.example.com&plain=yes
