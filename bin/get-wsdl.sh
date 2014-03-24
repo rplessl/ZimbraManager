@@ -13,7 +13,7 @@ fi
 
 SERVER="$1"
 GIVENPORT="$2"
-PORT=":${GIVENPORT:7071}"
+PORT=":${GIVENPORT:-7071}"
 
 BASEDIR=$(dirname $0)
 
