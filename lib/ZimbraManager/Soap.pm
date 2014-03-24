@@ -1,4 +1,3 @@
-
 package ZimbraManager::Soap;
 
 use Mojo::Base -base;
@@ -20,9 +19,29 @@ has 'debug' => sub {
 	return 0;
 };
 
+has 'soapdebug' => sub {
+	my $self = shift;
+	return 0;
+};
+
+
 has 'mode' => sub {
 	my $self = shift;
 	return 'full';
+};
+
+has 'zcsService' => sub {
+	my $self = shift;
+    my $mode = $self->mode;
+	when ('admin')  {
+		return 'zcsAdminService';
+	}
+	when ('user') {
+		return 'zcsUserService';
+	}
+	default {  
+		return 'zcsAdminService';
+	}
 };
 
 has 'wsdlPath' => sub {
@@ -33,7 +52,7 @@ has 'wsdlPath' => sub {
 has 'wsdlFile' => sub {
 	my $self = shift;
 	my $wsdlFile;
-	given ($self->mode) {
+	for ($self->mode) {
 		when ('admin')  {
 			$wsdlFile = $self->wsdlPath.'ZimbraAdminService.wsdl';
 		}
@@ -53,6 +72,7 @@ has 'wsdlFile' => sub {
 has 'wsdlXml' => sub { 
 	my $self = shift;
 	my $wsdlXml = XML::LibXML->new->parse_file($self->wsdlFile);
+	warn dumper($wsdlXml);
 	return $wsdlXml;
 };
 
@@ -105,19 +125,15 @@ has 'service' => sub {
 	return $zimbraServices;
 };
 
-has 'adminService' => sub {
-	my $self = shift;
-	return 'zcsAdminService';
-};
 
 has 'soapOps' => sub {	
 	my $self = shift;
 	my $soapOps;
 
-	my $adminService = $self->adminService;
-	my $uri  = $self->service->{$adminService}->{uri};
-	my $port = $self->service->{$adminService}->{port_name};
-	my $name = $self->service->{$adminService}->{name};
+	my $zcsService = $self->zcsService;
+	my $uri  = $self->service->{$zcsService}->{uri};
+	my $port = $self->service->{$zcsService}->{port_name};
+	my $name = $self->service->{$zcsService}->{name};
 
 	# redirect the endpoint as specified in the WSDL to our own server.
 	my $transporter = XML::Compile::Transport::SOAPHTTP->new(
@@ -156,8 +172,10 @@ sub call {
 	$self->log->debug(dumper { action => $action, args => $args });
 
 	my ( $response, $trace ) = $self->soapOps->{$action}->($args);
-	#warn dumper ("call(): response=", $response);
-	#warn dumper ("call(): trace=", $trace);
+    if ($self->soapdebug) {
+		$self->log->debug(dumper ("call(): response=", $response));
+		$self->log->debug(dumper  ("call(): trace=", $trace));
+	}
 	my $err;	 
 	if ( $response->{Fault} ) {
 		my $error   = "SOAP ERROR from Zimbra: ". $response->{Fault}->{faultstring};
@@ -183,7 +201,8 @@ Zimbra Manager - ZimbraManager::Soap.pm - A class to manage Zimbra with SOAP
     has 'soap' => sub {
         my $self = shift;
         return ZimbraManager::Soap->new(
-            log => $self->log
+            log => $self->log,
+            mode => 'full' # or 'admin' or 'user'
         );
     };
 

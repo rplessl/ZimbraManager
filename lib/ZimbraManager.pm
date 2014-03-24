@@ -10,12 +10,14 @@ has 'soap' => sub {
 	my $self = shift;
 	return ZimbraManager::Soap->new(
 		log => $self->log,
+		mode => 'full',
 	);
 };
 
 sub startup {
 	my $self = shift;
 
+	$self->secrets(['bb732c382ded15e58eb02bb0fe0e112e']);
     # session is valid for 1 day
     $self->sessions->cookie_name('zimbra-manager');
     $self->sessions->default_expiration(1*24*3600);
