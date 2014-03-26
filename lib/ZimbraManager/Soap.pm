@@ -33,14 +33,16 @@ has 'mode' => sub {
 has 'zcsService' => sub {
 	my $self = shift;
     my $mode = $self->mode;
-	when ('admin')  {
-		return 'zcsAdminService';
-	}
-	when ('user') {
-		return 'zcsUserService';
-	}
-	default {  
-		return 'zcsAdminService';
+	for ($self->mode) {
+		when ('admin') {
+			return 'zcsAdminService';
+		}
+		when ('user') {
+			return 'zcsUserService';
+		}
+		default {
+			return 'zcsAdminService';
+		}
 	}
 };
 
