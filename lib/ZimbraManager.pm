@@ -11,6 +11,7 @@ has 'soap' => sub {
 	return ZimbraManager::Soap->new(
 		log => $self->log,
 		mode => 'full',
+		soapdebug => 1,
 	);
 };
 
@@ -30,12 +31,13 @@ sub startup {
   		my $plain = $ctrl->param('plain');
   		my $ret;
   		my $err;
-  		given ($call) {
+  		for ($call) {
   			when ('auth') { 
   				my $user = $ctrl->param('user');
   				my $password = $ctrl->param('password');
   				($ret, $err) = $self->soap->call(auth($user,$password));  				
-  				$ret = 'Authentication sucessful!' if ($ret);  				
+  				$ret = 'Authentication sucessful!' if ($ret);
+
   			}
   			when ('getAccount') {
   				my $user = $ctrl->param('user');

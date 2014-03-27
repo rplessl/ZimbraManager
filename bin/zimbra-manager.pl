@@ -10,6 +10,9 @@ use ZimbraManager;
 
 our $VERSION = "0.1";
 
+# disable SSL Checks
+$ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'} = 0;
+
 # Start commands
 Mojolicious::Commands->start_app('ZimbraManager');
 

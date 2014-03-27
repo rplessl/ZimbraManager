@@ -74,7 +74,6 @@ has 'wsdlFile' => sub {
 has 'wsdlXml' => sub { 
 	my $self = shift;
 	my $wsdlXml = XML::LibXML->new->parse_file($self->wsdlFile);
-	warn dumper($wsdlXml);
 	return $wsdlXml;
 };
 
@@ -171,12 +170,14 @@ sub call {
 	my $action = shift;
 	my $args = shift;
 
-	$self->log->debug(dumper { action => $action, args => $args });
+	$self->log->debug(dumper { _function => 'ZimbraManager::Soap::call', 
+							   action => $action, 
+							   args => $args });
 
 	my ( $response, $trace ) = $self->soapOps->{$action}->($args);
     if ($self->soapdebug) {
 		$self->log->debug(dumper ("call(): response=", $response));
-		$self->log->debug(dumper  ("call(): trace=", $trace));
+		$self->log->debug(dumper ("call(): trace=", $trace));
 	}
 	my $err;	 
 	if ( $response->{Fault} ) {
