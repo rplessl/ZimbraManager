@@ -36,7 +36,7 @@ sub startup {
   				my $user = $ctrl->param('user');
   				my $password = $ctrl->param('password');
   				($ret, $err) = $self->soap->call(auth($user,$password));  				
-  				$ret = 'Authentication sucessful!' if ($ret);
+  				$ret = { auth => 'Authentication sucessful!' } if ($ret);
 
   			}
   			when ('getAccount') {
@@ -65,11 +65,9 @@ sub startup {
 		my $ctrl  = shift;
 		my $call  = $ctrl->param('call');
 		my $plain = $ctrl->param('plain');
-		my $json_args = $ctrl->param('json_args');
 		my $ret;
 		my $err;
-
-		my $perl_args = decode_json($json_args);
+		my $perl_args = decode_json($ctrl->req->body);
 		($ret, $err) = $self->soap->call($call, $perl_args);
 		$self->renderOutput($ctrl, $ret, $err, $plain);
 	});
@@ -77,19 +75,18 @@ sub startup {
 
 sub renderOutput {
 	my ($self, $ctrl, $ret, $err, $plain) = @_;
-	if (ref $ret eq 'HASH'){
-		$ret = dumper $ret;
-	}
 	my $text = $err ? $err : $ret;
 	if ($err) {
         $ctrl->res->code(510);
 	}
-
 	if ($plain) {
+		if (ref $text eq 'HASH') {
+			$text = dumper $text;
+		}
 		$ctrl->render(text => "<pre>$text</pre>") if ($plain);
 	}
 	else {
-		$ctrl->render(json => $text);
+		$ctrl->render(json => $text);		
 	}
 }
 

@@ -38,7 +38,7 @@ has 'zcsService' => sub {
 			return 'zcsAdminService';
 		}
 		when ('user') {
-			return 'zcsUserService';
+			return 'zcsService';
 		}
 		default {
 			return 'zcsAdminService';
