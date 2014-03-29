@@ -4,6 +4,8 @@ use Mojo::Base -base;
 use Mojo::Util qw(dumper);
 use Mojo::Log;
 
+use IO::Socket::SSL qw( SSL_VERIFY_NONE SSL_VERIFY_PEER );
+
 use XML::Compile::WSDL11;
 use XML::Compile::SOAP11;
 use XML::Compile::SOAP::Trace;
@@ -11,20 +13,22 @@ use XML::Compile::Transport::SOAPHTTP;
 
 use 5.14.0;
 
-
+### DEBUG and LOGGING stuff ###
 has 'log';
-
 has 'debug' => sub {
 	my $self = shift;
 	return 0;
 };
-
 has 'soapdebug' => sub {
 	my $self = shift;
 	return 0;
 };
+has 'soapErrorsToConsumer' => sub {
+	my $self = shift;
+	return 0;
+};
 
-
+### Functionality ###
 has 'mode' => sub {
 	my $self = shift;
 	return 'full';
@@ -32,7 +36,7 @@ has 'mode' => sub {
 
 has 'zcsService' => sub {
 	my $self = shift;
-    my $mode = $self->mode;
+	my $mode = $self->mode;
 	for ($self->mode) {
 		when ('admin') {
 			return 'zcsAdminService';
@@ -61,11 +65,11 @@ has 'wsdlFile' => sub {
 		when ('user') {
 			$wsdlFile = $self->wsdlPath.'ZimbraUserService.wsdl';
 		}
-		default {  
+		default {
 			$wsdlFile = $self->wsdlPath.'ZimbraService.wsdl';
 		}
 	}
-	if ($self->debug) { 
+	if ($self->debug) {
 		$self->log->debug("wsdlFile=$wsdlFile");
 	}
 	return $wsdlFile;
@@ -105,7 +109,7 @@ has 'service' => sub {
 		my $uri_protocol = $1;
 		my $uri_host     = $2;
 		my $uri_port     = $3;
-		
+
 		$zimbraServices->{$name} = {
 			host           => $uri_host,
 			name           => $name,
@@ -115,9 +119,9 @@ has 'service' => sub {
 			uri_port       => $uri_port,
 			uri_protocol   => $uri_protocol,
 		};
-	}	
+	}
 	if ($self->debug) {
-		for my $servicename (keys %$zimbraServices) {	
+		for my $servicename (keys %$zimbraServices) {
 			for my $k (keys %{$zimbraServices->{$servicename}}) {
 				$self->log->debug("$k=", $zimbraServices->{$servicename}->{$k});
 			}
@@ -126,8 +130,7 @@ has 'service' => sub {
 	return $zimbraServices;
 };
 
-
-has 'soapOps' => sub {	
+has 'soapOps' => sub {
 	my $self = shift;
 	my $soapOps;
 
@@ -139,10 +142,18 @@ has 'soapOps' => sub {
 	# redirect the endpoint as specified in the WSDL to our own server.
 	my $transporter = XML::Compile::Transport::SOAPHTTP->new(
 		address    => $uri,
-		keep_alive => 1,	
+		keep_alive => 1,
+		# for SSL handling we need our own LWP Agent
+		user_agent => LWP::UserAgent->new(
+			ssl_opts => { # default is SSL verification on
+						  # NOTE: PERL_LWP_SSL_VERIFY_MODE is not an "official" env variable
+				verify_hostname => $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'} // 1,
+				SSL_verify_mode => $ENV{'PERL_LWP_SSL_VERIFY_MODE'}     // SSL_VERIFY_PEER,
+			}.			
+		),
 	);
 
-	# # enable cookies for zimbra Auth
+	# enable cookies for zimbra Auth
 	my $ua = $transporter->userAgent();
 	$ua->cookie_jar({ file => "$ENV{HOME}/.cookies.txt" });
 
@@ -155,11 +166,11 @@ has 'soapOps' => sub {
 			warn $msg;
 		}
 		$soapOps->{ $soapOp->name } =
-		$self->wsdl->compileClient( 
+		$self->wsdl->compileClient(
 			$soapOp->name,
 			port      => $port,
 			service   => $name,
-			transport => $send, 
+			transport => $send,
 		);
 	}
 	return $soapOps;
@@ -170,21 +181,23 @@ sub call {
 	my $action = shift;
 	my $args = shift;
 
-	$self->log->debug(dumper { _function => 'ZimbraManager::Soap::call', 
-							   action => $action, 
+	$self->log->debug(dumper { _function => 'ZimbraManager::Soap::call',
+							   action => $action,
 							   args => $args });
 
 	my ( $response, $trace ) = $self->soapOps->{$action}->($args);
-    if ($self->soapdebug) {
+	if ($self->soapdebug) {
 		$self->log->debug(dumper ("call(): response=", $response));
 		$self->log->debug(dumper ("call(): trace=", $trace));
 	}
-	my $err;	 
+	my $err;
 	if ( $response->{Fault} ) {
-		my $error   = "SOAP ERROR from Zimbra: ". $response->{Fault}->{faultstring};
-		my $msg1    = 'response: ' . sprintf "%s", dumper $response;
-    	my $msg2    = 'trace:    ' . sprintf "%s", dumper $trace;
-	 	$err = "$error\n\n\n$msg1\n$msg2\n";
+		my $err = "SOAP ERROR from Zimbra: ". $response->{Fault}->{faultstring};
+		if ($self->soapErrorsToConsumer) {
+			my $msg1    = 'response: ' . sprintf "%s", dumper $response;
+			my $msg2    = 'trace:    ' . sprintf "%s", dumper $trace;
+			$err .= "\n\n\n$msg1\n$msg2\n";
+		}
 	}
 	return ($response->{parameters}, $err);
 }
@@ -211,7 +224,6 @@ Zimbra Manager - ZimbraManager::Soap.pm - A class to manage Zimbra with SOAP
 
     my $ret = $self->soap->call(FUNCTION, %PARAMS));
 
-
 =head1 LICENSE
 
 This program is free software: you can redistribute it and/or modify it
@@ -234,5 +246,6 @@ S<Roman Plessl E<lt>roman.plessl@oetiker.chE<gt>>
 =head1 HISTORY
 
  2014-03-20 rp Initial Version
+ 2014-03-27 rp Improved Version (Errors, SSL)
 
 =cut
