@@ -3,7 +3,7 @@
 # Downloads WSDL and XSD Files
 
 # check script call
-if [ $# -ne 1 ];
+if [ $# -ne 1 -a $# -ne 2 ];
 then
   echo "USAGE: $0 zimbra.example.com"
   echo "  optional you can add the SOAP port"
