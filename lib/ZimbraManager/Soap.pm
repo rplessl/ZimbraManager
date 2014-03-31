@@ -195,7 +195,7 @@ sub call {
 	}
 	my $err;
 	if ( $response->{Fault} ) {
-		my $err = "SOAP ERROR from Zimbra: ". $response->{Fault}->{faultstring};
+		$err = 'SOAP ERROR from Zimbra: '. $response->{Fault}->{faultstring};
 		if ($self->soapErrorsToConsumer) {
 			my $msg1    = 'response: ' . sprintf "%s", dumper $response;
 			my $msg2    = 'trace:    ' . sprintf "%s", dumper $trace;
