@@ -2,6 +2,9 @@
 
 use strict;
 use warnings;
+
+no if $] >= 5.017011, warnings => 'experimental::smartmatch';
+
 use FindBin;  
 use lib "$FindBin::Bin/../thirdparty/lib/perl5";
 use lib "$FindBin::Bin/../lib";

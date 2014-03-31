@@ -9,6 +9,7 @@ for module in \
   XML::Compile::Transport::SOAPHTTP \
   Net::HTTP \
   Mojolicious \
+  LWP::Protocol::https \
   IO::Socket::SSL \
 ; do
   perlmodule $module
