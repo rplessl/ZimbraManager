@@ -139,6 +139,9 @@ has 'soapOps' => sub {
 	my $port = $self->service->{$zcsService}->{port_name};
 	my $name = $self->service->{$zcsService}->{name};
 
+	print $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'};
+	print $ENV{'PERL_LWP_SSL_VERIFY_MODE'};
+
 	# redirect the endpoint as specified in the WSDL to our own server.
 	my $transporter = XML::Compile::Transport::SOAPHTTP->new(
 		address    => $uri,
@@ -146,10 +149,10 @@ has 'soapOps' => sub {
 		# for SSL handling we need our own LWP Agent
 		user_agent => LWP::UserAgent->new(
 			ssl_opts => { # default is SSL verification on
-						  # NOTE: PERL_LWP_SSL_VERIFY_MODE is not an "official" env variable
+				# NOTE: PERL_LWP_SSL_VERIFY_MODE is not an "official" env variable
 				verify_hostname => $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'} // 1,
 				SSL_verify_mode => $ENV{'PERL_LWP_SSL_VERIFY_MODE'}     // SSL_VERIFY_PEER,
-			}.			
+			},			
 		),
 	);
 

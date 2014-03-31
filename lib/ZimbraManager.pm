@@ -10,8 +10,7 @@ has 'soap' => sub {
 	my $self = shift;
 	return ZimbraManager::Soap->new(
 		log => $self->log,
-		mode => 'full',
-		soapdebug => 1,
+		mode => 'full',		
 	);
 };
 
