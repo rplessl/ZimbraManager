@@ -139,8 +139,10 @@ has 'soapOps' => sub {
 	my $port = $self->service->{$zcsService}->{port_name};
 	my $name = $self->service->{$zcsService}->{name};
 
-	print $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'};
-	print $ENV{'PERL_LWP_SSL_VERIFY_MODE'};
+	if ($self->debug) {
+		$self->log->debug('PERL_LWP_SSL_VERIFY_HOSTNAME=',$ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'});
+		$self->log->debug('PERL_LWP_SSL_VERIFY_MODE',$ENV{'PERL_LWP_SSL_VERIFY_MODE'});
+	}
 
 	# redirect the endpoint as specified in the WSDL to our own server.
 	my $transporter = XML::Compile::Transport::SOAPHTTP->new(
@@ -158,7 +160,10 @@ has 'soapOps' => sub {
 
 	# enable cookies for zimbra Auth
 	my $ua = $transporter->userAgent();
-	$ua->cookie_jar({ file => "$ENV{HOME}/.cookies.txt" });
+	require HTTP::CookieJar::LWP;
+	$ua->cookie_jar(HTTP::CookieJar::LWP->new());
+	#  $ua->cookie_jar({ file => "$ENV{HOME}/.cookies.txt" });
+
 
 	my $send = $transporter->compileClient( port => $port );
 

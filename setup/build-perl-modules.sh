@@ -11,6 +11,7 @@ for module in \
   Mojolicious \
   LWP::Protocol::https \
   IO::Socket::SSL \
+  HTTP::CookieJar \
 ; do
   perlmodule $module
 done
