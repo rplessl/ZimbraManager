@@ -37,10 +37,25 @@ or
     $ ./bin/zimbra-manager.pl daemon
 
 
+Deployment
+----------
+### RHEL
+
+An init.d and sysconfig configuration file is located in setup/rhel
+
+    $ cp setup/rhel/rc.d/init.d/ZimbraManager   /etc/rc.d/init.d/
+    $ chmod 755 /etc/rc.d/init.d/ZimbraManager
+    $ cp setup/rhel/sysconfig/ZimbraManager     /etc/sysconfig/
+    $ cp setup/rhel/logrotate.d/ZimbraManager   /etc/logrotate.d/
+
+    $ chkconfig  --add ZimbraManager
+    $ service ZimbraManager restart
+
 
 LICENSE
 --------
 LGPL license (see LICENSE)
+
 
 Contact info
 ------------
