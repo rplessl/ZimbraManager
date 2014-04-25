@@ -194,7 +194,7 @@ sub call {
 		$self->log->debug(dumper ("call(): trace=", $trace));
 	}
 	my $err;
-	if ( $response->{Fault} ) {
+	if ( not defined $response or $response->{Fault} ) {
 		$err = 'SOAP ERROR from Zimbra: '. $response->{Fault}->{faultstring};
 		if ($self->soapErrorsToConsumer) {
 			my $msg1    = 'response: ' . sprintf "%s", dumper $response;
