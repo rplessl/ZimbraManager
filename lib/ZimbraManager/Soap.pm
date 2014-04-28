@@ -132,8 +132,8 @@ has 'soapOps' => sub {
 	my $port = $self->service->{$zcsService}->{port_name};
 	my $name = $self->service->{$zcsService}->{name};
 
-    $self->log->debug("PERL_LWP_SSL_VERIFY_HOSTNAME=$ENV{'ERL_LWP_SSL_VERIFY_HOSTNAME}\n"
-                    . "PERL_LWP_SSL_VERIFY_MODE=$ENV{'PERL_LWP_SSL_VERIFY_MODE'}");
+    my $verifyHostname = $ENV{ERL_LWP_SSL_VERIFY_HOSTNAME} // 1;
+    my $verifyMode     = $ENV{ERL_LWP_SSL_VERIFY_MODE}     // SSL_VERIFY_PEER;
 
 	# redirect the endpoint as specified in the WSDL to our own server.
 	my $transporter = XML::Compile::Transport::SOAPHTTP->new(
@@ -143,11 +143,13 @@ has 'soapOps' => sub {
 		user_agent => LWP::UserAgent->new(
 			ssl_opts => { # default is SSL verification on
 				# NOTE: PERL_LWP_SSL_VERIFY_MODE is not an "official" env variable
-				verify_hostname => $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'} // 1,
-				SSL_verify_mode => $ENV{'PERL_LWP_SSL_VERIFY_MODE'}     // SSL_VERIFY_PEER,
-			},			
+				verify_hostname => $verifyHostname,
+				SSL_verify_mode => $verifyMode,
+			}
 		),
 	);
+    $self->log->debug("LWP_SSL_VERIFY_HOSTNAME = $verifyHostname\n"
+                    . "LWP_SSL_VERIFY_MODE     = $verifyMode");
 
 	# enable cookies for zimbra Auth
 	my $ua = $transporter->userAgent();
