@@ -52,12 +52,12 @@ The ZimbraManager SOAP object
 =cut
 
 has 'soap' => sub {
-	my $self = shift;
-	return ZimbraManager::Soap->new(
-		log => $self->log,
-		mode => 'full',	
-		# soapdebug => '1',
-	);
+    my $self = shift;
+    return ZimbraManager::Soap->new(
+        log => $self->log,
+        mode => 'full',
+        soapDebug => '1',
+    );
 };
 
 =head1 METHODS
@@ -71,143 +71,186 @@ Calls Zimbra with the given argument and returns the SOAP response as perl hash.
 =cut
 
 sub startup {
-	my $self = shift;
+    my $self = shift;
 
-	$self->secrets(['bb732c382ded15e58eb02bb0fe0e112e']);
-
-    $self->sessions->cookie_name('zimbra-manager');
+    $self->secrets(['bb732c382ded15e58eb02bb0fe0e112e']);
     # session is valid for 1 day
     $self->sessions->default_expiration(1*24*3600);
+    $self->sessions->cookie_name('zimbra-manager');
 
-	my $r = $self->routes;
+    my $r = $self->routes;
 
-	$r->get('/:call' => sub {
-  		my $ctrl = shift;
-  		my $call = $ctrl->param('call');
-  		my $plain = $ctrl->param('plain');
-  		my $ret;
-  		my $err;
-  		for ($call) {
-  			when ('auth') { 
-  				my $user = $ctrl->param('user');
-  				my $password = $ctrl->param('password');
-  				($ret, $err) = $self->soap->call(auth($user,$password));  				
-  				$ret = { auth => 'Authentication sucessful!' } if ($ret);
+    # Default routing is done with POST requests
+    $r->post('/:call' => sub {
+        my $ctrl  = shift;
+        my $call  = $ctrl->param('call');
+        my $plain = $ctrl->param('plain');
+        my $ret;
+        my $err;
+        my $perl_args = decode_json($ctrl->req->body);
+        ($ret, $err) = $self->soap->call($call, $perl_args);
+        $self->renderOutput($ctrl, $ret, $err, $plain);
+    });
 
-  			}
-  			when ('getAccount') {
-  				my $user = $ctrl->param('user');
-  				($ret, $err) = $self->soap->call(getAccount($user));
-  			}
-  			when ('getAccountInfo') {
-  				my $user = $ctrl->param('user');
-  				($ret, $err) = $self->soap->call(getAccountInfo($user));
-  			}
-  			when ('getAllAccounts') {
-  				my $name = $ctrl->param('name');
-  				my $domain = $ctrl->param('domain');
-  				($ret, $err) = $self->soap->call(getAllAccounts($name, $domain));	  				
-  				$ret = processAllAccounts($ret) unless ($err);  				
- 			}
-  			default {
-				my %params;
-  				($ret, $err) = $self->soap->call($call, \%params);  				
-  			}
-  		}
-  		$self->renderOutput($ctrl, $ret, $err, $plain);
-  	});
-
-	$r->post('/:call' => sub {
-		my $ctrl  = shift;
-		my $call  = $ctrl->param('call');
-		my $plain = $ctrl->param('plain');
-		my $ret;
-		my $err;
-		my $perl_args = decode_json($ctrl->req->body);
-		($ret, $err) = $self->soap->call($call, $perl_args);
-		$self->renderOutput($ctrl, $ret, $err, $plain);
-	});
+    # Special routing for with GET requests
+    # especially auth is used for session handling
+    $r->get('/:call' => sub {
+        my $ctrl  = shift;
+        my $call  = $ctrl->param('call');
+        my $plain = $ctrl->param('plain');
+        my $ret;
+        my $err;
+        if ($call eq 'auth') {
+            my $user     = $ctrl->param('user');
+            my $password = $ctrl->param('password');
+            if ($self->sessions('ZM_ADMIN_AUTH_TOKEN')) {
+                $ret = 'true';
+            } 
+            else {
+                ($ret, $err) = $self->soap->call( buildAuth($user,$password) );
+            }
+            $ret = { auth => 'Authentication sucessful!' } if ($ret);
+        }
+        # START: Proof-Of-Example and Debug Code
+        elsif ($call eq 'getAccount') {
+            my $user = $ctrl->param('user');
+            ($ret, $err) = $self->soap->call( buildGetAccount($user) );
+        }
+        elsif ($call eq 'getAccountInfo') {
+            my $user = $ctrl->param('user');
+            ($ret, $err) = $self->soap->call( buildGetAccountInfo($user) );
+        }
+        elsif ($call eq 'getAllAccounts') {
+            my $name = $ctrl->param('name');
+            my $domain = $ctrl->param('domain');
+            ($ret, $err) = $self->soap->call( buildGetAllAccounts($name, $domain) );
+            $ret = helperHashingAllAccounts($ret) unless ($err);
+        }
+        # END: Proof-Of-Example and Debug Code
+        else {
+            my %params;
+            ($ret, $err) = $self->soap->call($call, \%params);
+        }
+        $self->renderOutput($ctrl, $ret, $err, $plain);
+    });    
 }
+
+=head2 renderOutput
+
+Renders the Output in JSON or readable plain text
+
+=cut
 
 sub renderOutput {
-	my ($self, $ctrl, $ret, $err, $plain) = @_;
-	my $text = $err ? $err : $ret;
-	if ($err) {
+    my ($self, $ctrl, $ret, $err, $plain) = @_;
+    my $text = $err ? $err : $ret;
+    if ($err) {
         $ctrl->res->code(510);
-	}
-	if ($plain) {
-		if (ref $text eq 'HASH') {
-			$text = dumper $text;
-		}
-		$ctrl->render(text => "<pre>$text</pre>") if ($plain);
-	}
-	else {
-		$ctrl->render(json => $text);		
-	}
+    }
+    if ($plain) {
+        if (ref $text eq 'HASH') {
+            $text = dumper $text;
+        }
+        $ctrl->render(text => "<pre>$text</pre>") if ($plain);
+    }
+    else {
+        $ctrl->render(json => $text);        
+    }
 }
 
-sub auth { 
- 	my $user = shift;
- 	my $password = shift;
- 	return (
- 	'authRequest', 
-	{ persistAuthTokenCookie => 1, 
-		   password => $password, 
-			account =>  { 
-				 by => 'name', 
-				  _ => $user}}
-	);
+=head2 buildAuth
+
+Builds auth call for SOAP
+
+=cut
+
+sub buildAuth { 
+     my $user = shift;
+     my $password = shift;
+     return (
+     'authRequest', 
+    { persistAuthTokenCookie => 1, 
+           password => $password, 
+            account =>  { 
+                 by => 'name', 
+                  _ => $user}}
+    );
 }
 
-sub getAccountInfo {
-	my $user = shift;	
-	return (
-		 'getAccountInfoRequest', 
-		 { account => { 
-					by => 'name', 
-					_  => $user}}
-	);	
+=head2 Proof-Of-Example GET SOAP Call wrappers
+
+=head3 buildGetAccountInfo
+
+Builds getAccountInfo call for SOAP
+
+=cut
+
+sub buildGetAccountInfo {
+    my $user = shift;    
+    return (
+         'getAccountInfoRequest', 
+         { account => { 
+                    by => 'name', 
+                    _  => $user}}
+    );    
 }
 
-sub getAccount {
-	my $user = shift;	
-	return (
-		 'getAccountRequest', 
-		 { account => { 
-					by => 'name', 
-					_  => $user}}
-	);	
+=head3 buildGetAccount
+
+Builds getAccount call for SOAP
+
+=cut
+
+sub buildGetAccount {
+    my $user = shift;    
+    return (
+         'getAccountRequest', 
+         { account => { 
+                    by => 'name', 
+                    _  => $user}}
+    );    
 }
 
+=head3 buildGetAllAccount
 
-sub getAllAccounts {
-	my $name = shift;
-	my $domain = shift;
-	return (	
-		 'getAllAccountsRequest', 
-		 { server => { 
-				   by => 'name', 
-					_ => $name }, 
-		   domain => { 
-				   by => 'name', 
-					_ => $domain }}
-	);
+Builds getAllAccount call for SOAP
+
+=cut
+
+sub buildGetAllAccounts {
+    my $name = shift;
+    my $domain = shift;
+    return (    
+         'getAllAccountsRequest', 
+         { server => { 
+                   by => 'name', 
+                    _ => $name }, 
+           domain => { 
+                   by => 'name', 
+                    _ => $domain }}
+    );
 }
 
-sub processAllAccounts {
-	my $ret = shift;
-	my $accounts;
-	for my $za ( @{ $ret->{account} } ) {
-		my $name = $za->{name};
-		my $id = $za->{id};
-		my %kv = map { $_->{'n'} => $_->{'_'} } @{$za->{a}};
-		$accounts->{$name} = {
-			'name' => $name,
-			'id' => $id,
-			'kv' => \%kv,
-		};
-	}
-	return $accounts;
+=head3 helperHashingAllAccounts
+
+Helper function for processing AllAccounts SOAP call
+
+=cut
+
+sub helperHashingAllAccounts {
+    my $ret = shift;
+    my $accounts;
+    for my $za ( @{ $ret->{account} } ) {
+        my $name = $za->{name};
+        my $id = $za->{id};
+        my %kv = map { $_->{'n'} => $_->{'_'} } @{$za->{a}};
+        $accounts->{$name} = {
+            'name' => $name,
+            'id' => $id,
+            'kv' => \%kv,
+        };
+    }
+    return $accounts;
 }
 
 1;
@@ -228,6 +271,10 @@ more details.
 
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see L<http://www.gnu.org/licenses/>.
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 by Roman Plessl. All rights reserved.
 
 =head1 AUTHOR
 
