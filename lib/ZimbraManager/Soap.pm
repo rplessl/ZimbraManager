@@ -66,9 +66,7 @@ has 'wsdlFile' => sub {
     else {
         $wsdlFile = $self->wsdlPath.'ZimbraService.wsdl';
 	}
-	if ($self->debug) {
-		$self->log->debug("wsdlFile=$wsdlFile");
-	}
+    $self->log->debug("wsdlFile=$wsdlFile");
 	return $wsdlFile;
 };
 
@@ -83,9 +81,7 @@ has 'wsdl' => sub {
 	my $wsdlXml = $self->wsdlXml;
 	my $wsdl = XML::Compile::WSDL11->new($wsdlXml);
 	for my $xsd (glob $self->wsdlPath."*.xsd") {
-		if ($self->debug) {
-			$self->log->debug("XML Schema Import of file:", $xsd);
-		}
+        $self->log->debug("XML Schema Import of file:", $xsd);
 		$wsdl->importDefinitions($xsd);
 	}
 	return $wsdl;
@@ -136,8 +132,8 @@ has 'soapOps' => sub {
 	my $port = $self->service->{$zcsService}->{port_name};
 	my $name = $self->service->{$zcsService}->{name};
 
-	print $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'};
-	print $ENV{'PERL_LWP_SSL_VERIFY_MODE'};
+    $self->log->debug("PERL_LWP_SSL_VERIFY_HOSTNAME=$ENV{'ERL_LWP_SSL_VERIFY_HOSTNAME}\n"
+                    . "PERL_LWP_SSL_VERIFY_MODE=$ENV{'PERL_LWP_SSL_VERIFY_MODE'}");
 
 	# redirect the endpoint as specified in the WSDL to our own server.
 	my $transporter = XML::Compile::Transport::SOAPHTTP->new(
@@ -161,10 +157,7 @@ has 'soapOps' => sub {
 
 	# Compile all service methods
 	for my $soapOp ( $self->wsdl->operations( port => $port ) ) {
-		if ($self->debug) {
-			my $msg = sprintf "got soap operation %s", $soapOp->name;
-			warn $msg;
-		}
+		$self->log->debug("Got soap operation " . $soapOp->name);
 		$soapOps->{ $soapOp->name } =
 		$self->wsdl->compileClient(
 			$soapOp->name,
