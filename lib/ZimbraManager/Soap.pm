@@ -37,16 +37,14 @@ has 'mode' => sub {
 has 'zcsService' => sub {
 	my $self = shift;
 	my $mode = $self->mode;
-	for ($self->mode) {
-		when ('admin') {
-			return 'zcsAdminService';
-		}
-		when ('user') {
-			return 'zcsService';
-		}
-		default {
-			return 'zcsAdminService';
-		}
+    if ($mode eq 'admin') {
+        return 'zcsAdminService';
+    }
+    elsif ($mode eq 'user') {
+        return 'zcsService';
+    }
+    else {
+        return 'zcsAdminService';
 	}
 };
 
@@ -58,16 +56,15 @@ has 'wsdlPath' => sub {
 has 'wsdlFile' => sub {
 	my $self = shift;
 	my $wsdlFile;
-	for ($self->mode) {
-		when ('admin')  {
-			$wsdlFile = $self->wsdlPath.'ZimbraAdminService.wsdl';
-		}
-		when ('user') {
-			$wsdlFile = $self->wsdlPath.'ZimbraUserService.wsdl';
-		}
-		default {
-			$wsdlFile = $self->wsdlPath.'ZimbraService.wsdl';
-		}
+	my $mode = $self->mode;
+    if ($mode eq 'admin') {
+		$wsdlFile = $self->wsdlPath.'ZimbraAdminService.wsdl';
+	}
+    elsif ($mode eq 'user') {
+        $wsdlFile = $self->wsdlPath.'ZimbraUserService.wsdl';
+    }
+    else {
+        $wsdlFile = $self->wsdlPath.'ZimbraService.wsdl';
 	}
 	if ($self->debug) {
 		$self->log->debug("wsdlFile=$wsdlFile");
