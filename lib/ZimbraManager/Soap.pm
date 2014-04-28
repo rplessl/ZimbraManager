@@ -307,15 +307,22 @@ sub call {
 	my ( $response, $trace ) = $self->soapOps->{$action}->($args);
 	if ($self->soapDebug) {
 		$self->log->debug(dumper ("call(): response=", $response));
-		$self->log->debug(dumper ("call(): trace=", $trace));
+		$self->log->debug(dumper ("call(): trace=",    $trace));
 	}
 	my $err;
-	if ( not defined $response or $response->{Fault} ) {
+	if ( not defined $response ) {
+		$err = 'SOAP ERROR from Zimbra: undefined response';
+		if ($self->soapErrorsToConsumer) {
+			my $trace    = 'trace:    ' . dumper($trace);
+			$err .= "\n\n\n$response\n";
+		}
+	}
+	elsif ( $response->{Fault} ) {
 		$err = 'SOAP ERROR from Zimbra: '. $response->{Fault}->{faultstring};
 		if ($self->soapErrorsToConsumer) {
-			my $msg1    = 'response: ' . sprintf "%s", dumper $response;
-			my $msg2    = 'trace:    ' . sprintf "%s", dumper $trace;
-			$err .= "\n\n\n$msg1\n$msg2\n";
+			my $response = 'response: ' . dumper($response);
+			my $trace    = 'trace:    ' . dumper($trace);
+			$err .= "\n\n\nresponse\n\n$trace\n";
 		}
 	}
 	return ($response->{parameters}, $err);
