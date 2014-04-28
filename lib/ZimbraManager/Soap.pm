@@ -22,7 +22,7 @@ ZimbraManager::Soap - class to manage Zimbra with perl and SOAP
 
 =head1 DESCRIPTION
 
-Helper Class for Zimbra adminstration interface.
+Helper class for Zimbra adminstration interface.
 
 =cut
 
@@ -252,7 +252,7 @@ has 'soapOps' => sub {
 
 	if ($self->debug) {
 		$self->log->debug('PERL_LWP_SSL_VERIFY_HOSTNAME=',$ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'});
-		$self->log->debug('PERL_LWP_SSL_VERIFY_MODE',$ENV{'PERL_LWP_SSL_VERIFY_MODE'});
+		$self->log->debug('PERL_LWP_SSL_VERIFY_MODE=',$ENV{'PERL_LWP_SSL_VERIFY_MODE'});
 	}
 
 	# redirect the endpoint as specified in the WSDL to our own server.
