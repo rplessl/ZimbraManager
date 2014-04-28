@@ -50,17 +50,6 @@ The mojo log object
 
 has 'log';
 
-=head3 debug
-
-Enabled debug output to $self->log
-
-=cut
-
-has 'debug' => sub {
-    my $self = shift;
-    return 0;
-};
-
 =head3 soapDebug
 
 Enabled SOAP debug output to $self->log
@@ -154,9 +143,7 @@ has 'wsdlFile' => sub {
     else {
         die "no valid mode ($self->mode) for attribute wsdlFile has been set";
     }
-    if ($self->debug) {
-        $self->log->debug("wsdlFile=$wsdlFile");
-    }
+    $self->log->debug("wsdlFile=$wsdlFile");
     return $wsdlFile;
 };
 
@@ -184,13 +171,41 @@ has 'wsdl' => sub {
     my $wsdlXml = $self->wsdlXml;
     my $wsdl = XML::Compile::WSDL11->new($wsdlXml);
     for my $xsd (glob $self->wsdlPath."*.xsd") {
-        if ($self->debug) {
-            $self->log->debug("XML Schema Import of file:", $xsd);
-        }
+        $self->log->debug("XML Schema Import of file:", $xsd);
         $wsdl->importDefinitions($xsd);
     }
     return $wsdl;
 };
+
+=head2 returnParameterName
+
+Name of the return value / structure
+
+In Zimbra 8.0.7 this will be 'params' as defined here:
+
+    <wsdl:definitions>
+     ...
+     <wsdl:message name="AdminAbortHsmRequestMessage">
+      <wsdl:part name="params" element="zimbraAdmin:AbortHsmRequest"/>
+     </wsdl:message>
+     ...
+    </wsdl:definitions>
+
+In Zimbra 8.0.6 and previous versions this has been 'parameters' as defined here:
+
+    <wsdl:definitions>
+     ...
+     <wsdl:message name="AdminAbortHsmRequestMessage">
+      <wsdl:part name="parameters" element="zimbraAdmin:AbortHsmRequest"/>
+     </wsdl:message>
+     ...
+    </wsdl:definitions>
+
+=cut
+
+has 'returnParameterName' => sub {
+    return 'params';
+}
 
 =head2 service
 
@@ -224,7 +239,7 @@ has 'service' => sub {
             uri_protocol   => $uri_protocol,
         };
     }
-    if ($self->debug) {
+    if ($self->log->level eq 'debug') {
         for my $servicename (keys %$zimbraServices) {
             for my $k (keys %{$zimbraServices->{$servicename}}) {
                 $self->log->debug("$k=", $zimbraServices->{$servicename}->{$k});
@@ -250,8 +265,8 @@ has 'soapOps' => sub {
     my $port = $self->service->{$zcsService}->{port_name};
     my $name = $self->service->{$zcsService}->{name};
 
-    print $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'};
-    print $ENV{'PERL_LWP_SSL_VERIFY_MODE'};
+    my $verifyHostname = $ENV{ERL_LWP_SSL_VERIFY_HOSTNAME} // 1;
+    my $verifyMode     = $ENV{ERL_LWP_SSL_VERIFY_MODE}     // SSL_VERIFY_PEER;
 
     # redirect the endpoint as specified in the WSDL to our own server.
     my $transporter = XML::Compile::Transport::SOAPHTTP->new(
@@ -261,11 +276,14 @@ has 'soapOps' => sub {
         user_agent => LWP::UserAgent->new(
             ssl_opts => { # default is SSL verification on
                 # NOTE: PERL_LWP_SSL_VERIFY_MODE is not an "official" env variable
-                verify_hostname => $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'} // 1,
-                SSL_verify_mode => $ENV{'PERL_LWP_SSL_VERIFY_MODE'}     // SSL_VERIFY_PEER,
-            },            
+                verify_hostname => $verifyHostname,
+                SSL_verify_mode => $verifyMode,
+            },
         ),
     );
+
+    $self->log->debug("LWP_SSL_VERIFY_HOSTNAME = $verifyHostname\n"
+                    . "LWP_SSL_VERIFY_MODE     = $verifyMode");
 
     # enable cookies for zimbra Auth
     my $ua = $transporter->userAgent();
@@ -275,10 +293,7 @@ has 'soapOps' => sub {
 
     # Compile all service methods
     for my $soapOp ( $self->wsdl->operations( port => $port ) ) {
-        if ($self->debug) {
-            my $msg = sprintf "got soap operation %s", $soapOp->name;
-            warn $msg;
-        }
+        $self->log->debug("Got soap operation " . $soapOp->name);
         $soapOps->{ $soapOp->name } =
         $self->wsdl->compileClient(
             $soapOp->name,
@@ -305,25 +320,32 @@ sub call {
     my $action = shift;
     my $args = shift;
 
-    $self->log->debug(dumper { _function => 'ZimbraManager::Soap::call',
-                               action => $action,
-                               args => $args });
+    $self->log->debug( dumper { _function => 'ZimbraManager::Soap::call',
+                                action => $action,
+                                args => $args });
 
     my ( $response, $trace ) = $self->soapOps->{$action}->($args);
     if ($self->soapDebug) {
         $self->log->debug(dumper ("call(): response=", $response));
-        $self->log->debug(dumper ("call(): trace=", $trace));
+        $self->log->debug(dumper ("call(): trace=",    $trace));
     }
     my $err;
-    if ( not defined $response or $response->{Fault} ) {
-        $err = 'SOAP ERROR from Zimbra: '. $response->{Fault}->{faultstring};
+    if ( not defined $response ) {
+        $err = 'SOAP ERROR from Zimbra: undefined response';
         if ($self->soapErrorsToConsumer) {
-            my $msg1    = 'response: ' . sprintf "%s", dumper $response;
-            my $msg2    = 'trace:    ' . sprintf "%s", dumper $trace;
-            $err .= "\n\n\n$msg1\n$msg2\n";
+            my $trace    = 'trace:    ' . dumper($trace);
+            $err .= "\n\n\n$response\n";
         }
     }
-    return ($response->{parameters}, $err);
+    elsif ( $response->{Fault} ) {
+        $err = 'SOAP ERROR from Zimbra: '. $response->{Fault}->{faultstring};
+        if ($self->soapErrorsToConsumer) {
+            my $response = 'response: ' . dumper($response);
+            my $trace    = 'trace:    ' . dumper($trace);
+            $err .= "\n\n\n$response\n\n$trace\n";
+        }
+    }
+    return ($response->{$self->returnParameterName}, $err);
 }
 
 1;
