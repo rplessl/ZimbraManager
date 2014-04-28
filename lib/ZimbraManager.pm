@@ -1,10 +1,55 @@
 package ZimbraManager;
 
 use Mojo::Base 'Mojolicious';
+
+=head1 NAME
+
+ZimbraManager - A Mojolicious application to manage Zimbra with SOAP
+
+=head1 SYNOPSIS
+
+    use ZimbraManager;
+
+    # Start commands
+    Mojolicious::Commands->start_app('ZimbraManager');
+
+=head1 USAGE
+
+Examples in Webbrowser:
+
+    http://localhost:3000/auth?user=adminuser&password=MyAdminPassword
+
+
+    http://localhost:3000/getAccountInfo?user=roman@zimbra.example.com&plain=yes
+
+    http://localhost:3000/getAccountInfo?user=roman@zimbra.example.com
+
+
+    http://localhost:3000/getAccount?user=roman@zimbra.example.com&plain=yes
+
+    http://localhost:3000/getAccount?user=roman@zimbra.example.com
+
+
+    http://localhost:3000/getAllAccounts?name=zimbra.example.com&domain=zimbra.example.com&plain=yes
+
+    http://localhost:3000/getAllAccounts?name=zimbra.example.com&domain=zimbra.example.com
+
+=cut
+
 use Mojo::Util qw(dumper);
 use Mojo::JSON qw(decode_json encode_json);
 
 use ZimbraManager::Soap;
+
+use 5.14.0;
+
+=head1 ATTRIBUTES
+
+=head2 soap
+
+The ZimbraManager SOAP object
+
+=cut
 
 has 'soap' => sub {
 	my $self = shift;
@@ -14,6 +59,16 @@ has 'soap' => sub {
 		# soapdebug => '1',
 	);
 };
+
+=head1 METHODS
+
+All the methods of L<Mojo::Base> plus:
+
+=head2 startup
+
+Calls Zimbra with the given argument and returns the SOAP response as perl hash.
+
+=cut
 
 sub startup {
 	my $self = shift;
@@ -158,38 +213,6 @@ sub processAllAccounts {
 1;
 
 __END__
-
-=head1 NAME
-
-Zimbra Manager - ZimbraManager - A class to manage Zimbra with SOAP
-
-=head1 SYNOPSIS
-
-    use ZimbraManager;
-
-    # Start commands
-    Mojolicious::Commands->start_app('ZimbraManager');
-
-=head1 USAGE
-
-Examples in Webbrowser:
-
-    http://localhost:3000/auth?user=adminuser&password=MyAdminPassword
-
-
-    http://localhost:3000/getAccountInfo?user=roman@zimbra.example.com&plain=yes
-
-    http://localhost:3000/getAccountInfo?user=roman@zimbra.example.com
-
-
-    http://localhost:3000/getAccount?user=roman@zimbra.example.com&plain=yes
-
-    http://localhost:3000/getAccount?user=roman@zimbra.example.com
-
-
-    http://localhost:3000/getAllAccounts?name=zimbra.example.com&domain=zimbra.example.com&plain=yes
-
-    http://localhost:3000/getAllAccounts?name=zimbra.example.com&domain=zimbra.example.com
 
 =head1 LICENSE
 

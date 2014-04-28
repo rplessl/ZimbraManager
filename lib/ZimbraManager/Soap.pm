@@ -205,7 +205,7 @@ In Zimbra 8.0.6 and previous versions this has been 'parameters' as defined here
 
 has 'returnParameterName' => sub {
     return 'params';
-}
+};
 
 =head2 service
 
