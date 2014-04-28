@@ -1,6 +1,31 @@
 package ZimbraManager::Soap;
 
 use Mojo::Base -base;
+
+=head1 NAME
+
+ZimbraManager::Soap - class to manage Zimbra with perl and SOAP
+
+=head1 SYNOPSIS
+
+    use ZimbraManager::Soap;
+
+    has 'soap' => sub {
+        my $self = shift;
+        return ZimbraManager::Soap->new(
+            log => $self->log,
+            mode => 'full' # or 'admin' or 'user'
+        );
+    };
+
+    my $ret = $self->soap->call(FUNCTION, %PARAMS));
+
+=head1 DESCRIPTION
+
+Helper Class for Zimbra adminstration interface.
+
+=cut
+
 use Mojo::Util qw(dumper);
 use Mojo::Log;
 
@@ -13,68 +38,144 @@ use XML::Compile::Transport::SOAPHTTP;
 
 use 5.14.0;
 
-### DEBUG and LOGGING stuff ###
+=head1 ATTRIBUTES
+
+=head2 Logging and Debugging Attributes
+
+=head3 log
+
+The mojo log object
+
+=cut
+
 has 'log';
+
+=head3 debug
+
+Enabled debug output to $self->log
+
+=cut
+
 has 'debug' => sub {
 	my $self = shift;
 	return 0;
 };
-has 'soapdebug' => sub {
+
+=head3 soapDebug
+
+Enabled SOAP debug output to $self->log
+
+=cut
+
+has 'soapDebug' => sub {
 	my $self = shift;
 	return 0;
 };
+
+=head3 soapErrorsToConsumer
+
+Returns soapErrors to the consumer in the return messages
+
+=cut
+
 has 'soapErrorsToConsumer' => sub {
 	my $self = shift;
 	return 0;
 };
 
-### Functionality ###
+=head2 mode
+
+The zimbra SOAP interface has three modes:
+
+    admin: adminstration access and commands in admin context
+    user:  user accesses and commands in user context
+    full:  both admin and user
+
+=cut
+
 has 'mode' => sub {
 	my $self = shift;
 	return 'full';
 };
 
+=head2 zcsService
+
+Internal WSDL name for selecting mode
+
+=cut
+
 has 'zcsService' => sub {
 	my $self = shift;
 	my $mode = $self->mode;
-    if ($mode eq 'admin') {
-        return 'zcsAdminService';
-    }
-    elsif ($mode eq 'user') {
-        return 'zcsService';
-    }
-    else {
-        return 'zcsAdminService';
+	if    ($mode eq 'admin') {
+		return 'zcsAdminService';
+	}
+	elsif ($mode eq 'user') {
+		return 'zcsService';
+	}
+	elsif ($mode eq 'full') {
+		return 'zcsAdminService';
+	}
+	else {
+		die "no valid mode ($self->mode) for attribute zcsService has been set";
 	}
 };
+
+=head2 wsdlPath
+
+Path to WSDL and XML Schema file(s)
+
+=cut
 
 has 'wsdlPath' => sub {
 	my $self = shift;
 	return "$FindBin::Bin/../etc/wsdl/";
 };
 
+=head2 wsdlFile
+
+Select WSDL file according to mode
+
+=cut
+
 has 'wsdlFile' => sub {
 	my $self = shift;
 	my $wsdlFile;
 	my $mode = $self->mode;
-    if ($mode eq 'admin') {
+	if   ($mode eq 'admin') {
 		$wsdlFile = $self->wsdlPath.'ZimbraAdminService.wsdl';
 	}
-    elsif ($mode eq 'user') {
-        $wsdlFile = $self->wsdlPath.'ZimbraUserService.wsdl';
+	elsif ($mode eq 'user') {
+		$wsdlFile = $self->wsdlPath.'ZimbraUserService.wsdl';
     }
-    else {
-        $wsdlFile = $self->wsdlPath.'ZimbraService.wsdl';
+	elsif ($mode eq 'full') {
+		$wsdlFile = $self->wsdlPath.'ZimbraService.wsdl';
+	}
+	else {
+		die "no valid mode ($self->mode) for attribute wsdlFile has been set";
 	}
     $self->log->debug("wsdlFile=$wsdlFile");
 	return $wsdlFile;
 };
+
+=head2 wsdlXml
+
+parsed WSDL as XML
+
+=cut
 
 has 'wsdlXml' => sub { 
 	my $self = shift;
 	my $wsdlXml = XML::LibXML->new->parse_file($self->wsdlFile);
 	return $wsdlXml;
 };
+
+=head2 wsdl
+
+parsed WSDL as perl object with corresponding included XML Schema
+and function stubs.
+
+=cut
 
 has 'wsdl' => sub {
 	my $self = shift; 
@@ -86,6 +187,12 @@ has 'wsdl' => sub {
 	}
 	return $wsdl;
 };
+
+=head2 service
+
+Processed SOAP service URI on the server
+
+=cut
 
 has 'service' => sub {
 	my $self = shift;
@@ -122,6 +229,13 @@ has 'service' => sub {
 	}
 	return $zimbraServices;
 };
+
+=head2 soapOps
+
+All usable SOAP operations exported by the the SOAP interface and with the selected 
+mode.
+
+=cut
 
 has 'soapOps' => sub {
 	my $self = shift;
@@ -171,6 +285,16 @@ has 'soapOps' => sub {
 	return $soapOps;
 };
 
+=head1 METHODS
+
+All the methods of L<Mojo::Base> plus:
+
+=head2 call
+
+Calls Zimbra with the given argument and returns the SOAP response as perl hash.
+
+=cut
+
 sub call {
 	my $self = shift;
 	my $action = shift;
@@ -181,7 +305,7 @@ sub call {
 							   args => $args });
 
 	my ( $response, $trace ) = $self->soapOps->{$action}->($args);
-	if ($self->soapdebug) {
+	if ($self->soapDebug) {
 		$self->log->debug(dumper ("call(): response=", $response));
 		$self->log->debug(dumper ("call(): trace=", $trace));
 	}
@@ -201,24 +325,6 @@ sub call {
 
 __END__
 
-=head1 NAME
-
-Zimbra Manager - ZimbraManager::Soap.pm - A class to manage Zimbra with SOAP
-
-=head1 SYNOPSIS
-
-    use ZimbraManager::Soap;
-
-    has 'soap' => sub {
-        my $self = shift;
-        return ZimbraManager::Soap->new(
-            log => $self->log,
-            mode => 'full' # or 'admin' or 'user'
-        );
-    };
-
-    my $ret = $self->soap->call(FUNCTION, %PARAMS));
-
 =head1 LICENSE
 
 This program is free software: you can redistribute it and/or modify it
@@ -234,6 +340,10 @@ more details.
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see L<http://www.gnu.org/licenses/>.
 
+=head1 COPYRIGHT
+
+Copyright (c) 2014 by Roman Plessl. All rights reserved.
+
 =head1 AUTHOR
 
 S<Roman Plessl E<lt>roman.plessl@oetiker.chE<gt>>
@@ -244,3 +354,14 @@ S<Roman Plessl E<lt>roman.plessl@oetiker.chE<gt>>
  2014-03-27 rp Improved Version (Errors, SSL)
 
 =cut
+
+# Emacs Configuration
+#
+# Local Variables:
+# mode: cperl
+# eval: (cperl-set-style "PerlStyle")
+# mode: flyspell
+# mode: flyspell-prog
+# End:
+#
+# vi: sw=4 et
