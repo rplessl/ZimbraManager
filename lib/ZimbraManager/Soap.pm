@@ -57,8 +57,8 @@ Enabled debug output to $self->log
 =cut
 
 has 'debug' => sub {
-	my $self = shift;
-	return 0;
+    my $self = shift;
+    return 0;
 };
 
 =head3 soapDebug
@@ -68,8 +68,8 @@ Enabled SOAP debug output to $self->log
 =cut
 
 has 'soapDebug' => sub {
-	my $self = shift;
-	return 0;
+    my $self = shift;
+    return 0;
 };
 
 =head3 soapErrorsToConsumer
@@ -79,8 +79,8 @@ Returns soapErrors to the consumer in the return messages
 =cut
 
 has 'soapErrorsToConsumer' => sub {
-	my $self = shift;
-	return 0;
+    my $self = shift;
+    return 0;
 };
 
 =head2 mode
@@ -94,8 +94,8 @@ The zimbra SOAP interface has three modes:
 =cut
 
 has 'mode' => sub {
-	my $self = shift;
-	return 'full';
+    my $self = shift;
+    return 'full';
 };
 
 =head2 zcsService
@@ -105,20 +105,20 @@ Internal WSDL name for selecting mode
 =cut
 
 has 'zcsService' => sub {
-	my $self = shift;
-	my $mode = $self->mode;
-	if    ($mode eq 'admin') {
-		return 'zcsAdminService';
-	}
-	elsif ($mode eq 'user') {
-		return 'zcsService';
-	}
-	elsif ($mode eq 'full') {
-		return 'zcsAdminService';
-	}
-	else {
-		die "no valid mode ($self->mode) for attribute zcsService has been set";
-	}
+    my $self = shift;
+    my $mode = $self->mode;
+    if    ($mode eq 'admin') {
+        return 'zcsAdminService';
+    }
+    elsif ($mode eq 'user') {
+        return 'zcsService';
+    }
+    elsif ($mode eq 'full') {
+        return 'zcsAdminService';
+    }
+    else {
+        die "no valid mode ($self->mode) for attribute zcsService has been set";
+    }
 };
 
 =head2 wsdlPath
@@ -128,8 +128,8 @@ Path to WSDL and XML Schema file(s)
 =cut
 
 has 'wsdlPath' => sub {
-	my $self = shift;
-	return "$FindBin::Bin/../etc/wsdl/";
+    my $self = shift;
+    return "$FindBin::Bin/../etc/wsdl/";
 };
 
 =head2 wsdlFile
@@ -139,25 +139,25 @@ Select WSDL file according to mode
 =cut
 
 has 'wsdlFile' => sub {
-	my $self = shift;
-	my $wsdlFile;
-	my $mode = $self->mode;
-	if   ($mode eq 'admin') {
-		$wsdlFile = $self->wsdlPath.'ZimbraAdminService.wsdl';
-	}
-	elsif ($mode eq 'user') {
-		$wsdlFile = $self->wsdlPath.'ZimbraUserService.wsdl';
+    my $self = shift;
+    my $wsdlFile;
+    my $mode = $self->mode;
+    if   ($mode eq 'admin') {
+        $wsdlFile = $self->wsdlPath.'ZimbraAdminService.wsdl';
     }
-	elsif ($mode eq 'full') {
-		$wsdlFile = $self->wsdlPath.'ZimbraService.wsdl';
-	}
-	else {
-		die "no valid mode ($self->mode) for attribute wsdlFile has been set";
-	}
-	if ($self->debug) {
-		$self->log->debug("wsdlFile=$wsdlFile");
-	}
-	return $wsdlFile;
+    elsif ($mode eq 'user') {
+        $wsdlFile = $self->wsdlPath.'ZimbraUserService.wsdl';
+    }
+    elsif ($mode eq 'full') {
+        $wsdlFile = $self->wsdlPath.'ZimbraService.wsdl';
+    }
+    else {
+        die "no valid mode ($self->mode) for attribute wsdlFile has been set";
+    }
+    if ($self->debug) {
+        $self->log->debug("wsdlFile=$wsdlFile");
+    }
+    return $wsdlFile;
 };
 
 =head2 wsdlXml
@@ -167,9 +167,9 @@ parsed WSDL as XML
 =cut
 
 has 'wsdlXml' => sub { 
-	my $self = shift;
-	my $wsdlXml = XML::LibXML->new->parse_file($self->wsdlFile);
-	return $wsdlXml;
+    my $self = shift;
+    my $wsdlXml = XML::LibXML->new->parse_file($self->wsdlFile);
+    return $wsdlXml;
 };
 
 =head2 wsdl
@@ -180,16 +180,16 @@ and function stubs.
 =cut
 
 has 'wsdl' => sub {
-	my $self = shift; 
-	my $wsdlXml = $self->wsdlXml;
-	my $wsdl = XML::Compile::WSDL11->new($wsdlXml);
-	for my $xsd (glob $self->wsdlPath."*.xsd") {
-		if ($self->debug) {
-			$self->log->debug("XML Schema Import of file:", $xsd);
-		}
-		$wsdl->importDefinitions($xsd);
-	}
-	return $wsdl;
+    my $self = shift; 
+    my $wsdlXml = $self->wsdlXml;
+    my $wsdl = XML::Compile::WSDL11->new($wsdlXml);
+    for my $xsd (glob $self->wsdlPath."*.xsd") {
+        if ($self->debug) {
+            $self->log->debug("XML Schema Import of file:", $xsd);
+        }
+        $wsdl->importDefinitions($xsd);
+    }
+    return $wsdl;
 };
 
 =head2 service
@@ -199,39 +199,39 @@ Processed SOAP service URI on the server
 =cut
 
 has 'service' => sub {
-	my $self = shift;
-	my $wsdlXml = $self->wsdlXml;
-	my $zimbraServices;
-	my $wsdlServices = $wsdlXml->getElementsByTagName( 'wsdl:service' );
-	for my $service (@$wsdlServices) {
-		my $name         = $service->getAttribute( 'name' );
-		my $port         = $service->getElementsByTagName( 'wsdl:port' )->[0];	
-		my $port_name    = $port->getAttribute( 'name' );
-		my $address      = $port->getElementsByTagName( 'soap:address' )->[0];
-		my $uri          = $address->getAttribute( 'location' );
-		   $uri          =~ m/^(https|http):\/\/(.+?):(.+?)\//;
-		my $uri_protocol = $1;
-		my $uri_host     = $2;
-		my $uri_port     = $3;
+    my $self = shift;
+    my $wsdlXml = $self->wsdlXml;
+    my $zimbraServices;
+    my $wsdlServices = $wsdlXml->getElementsByTagName( 'wsdl:service' );
+    for my $service (@$wsdlServices) {
+        my $name         = $service->getAttribute( 'name' );
+        my $port         = $service->getElementsByTagName( 'wsdl:port' )->[0];    
+        my $port_name    = $port->getAttribute( 'name' );
+        my $address      = $port->getElementsByTagName( 'soap:address' )->[0];
+        my $uri          = $address->getAttribute( 'location' );
+           $uri          =~ m/^(https|http):\/\/(.+?):(.+?)\//;
+        my $uri_protocol = $1;
+        my $uri_host     = $2;
+        my $uri_port     = $3;
 
-		$zimbraServices->{$name} = {
-			host           => $uri_host,
-			name           => $name,
-			port_name      => $port_name,
-			uri            => $uri,
-			uri_host       => $uri_host,
-			uri_port       => $uri_port,
-			uri_protocol   => $uri_protocol,
-		};
-	}
-	if ($self->debug) {
-		for my $servicename (keys %$zimbraServices) {
-			for my $k (keys %{$zimbraServices->{$servicename}}) {
-				$self->log->debug("$k=", $zimbraServices->{$servicename}->{$k});
-			}
-		}
-	}
-	return $zimbraServices;
+        $zimbraServices->{$name} = {
+            host           => $uri_host,
+            name           => $name,
+            port_name      => $port_name,
+            uri            => $uri,
+            uri_host       => $uri_host,
+            uri_port       => $uri_port,
+            uri_protocol   => $uri_protocol,
+        };
+    }
+    if ($self->debug) {
+        for my $servicename (keys %$zimbraServices) {
+            for my $k (keys %{$zimbraServices->{$servicename}}) {
+                $self->log->debug("$k=", $zimbraServices->{$servicename}->{$k});
+            }
+        }
+    }
+    return $zimbraServices;
 };
 
 =head2 soapOps
@@ -242,52 +242,52 @@ mode.
 =cut
 
 has 'soapOps' => sub {
-	my $self = shift;
-	my $soapOps;
+    my $self = shift;
+    my $soapOps;
 
-	my $zcsService = $self->zcsService;
-	my $uri  = $self->service->{$zcsService}->{uri};
-	my $port = $self->service->{$zcsService}->{port_name};
-	my $name = $self->service->{$zcsService}->{name};
+    my $zcsService = $self->zcsService;
+    my $uri  = $self->service->{$zcsService}->{uri};
+    my $port = $self->service->{$zcsService}->{port_name};
+    my $name = $self->service->{$zcsService}->{name};
 
-	print $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'};
-	print $ENV{'PERL_LWP_SSL_VERIFY_MODE'};
+    print $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'};
+    print $ENV{'PERL_LWP_SSL_VERIFY_MODE'};
 
-	# redirect the endpoint as specified in the WSDL to our own server.
-	my $transporter = XML::Compile::Transport::SOAPHTTP->new(
-		address    => $uri,
-		keep_alive => 1,
-		# for SSL handling we need our own LWP Agent
-		user_agent => LWP::UserAgent->new(
-			ssl_opts => { # default is SSL verification on
-				# NOTE: PERL_LWP_SSL_VERIFY_MODE is not an "official" env variable
-				verify_hostname => $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'} // 1,
-				SSL_verify_mode => $ENV{'PERL_LWP_SSL_VERIFY_MODE'}     // SSL_VERIFY_PEER,
-			},			
-		),
-	);
+    # redirect the endpoint as specified in the WSDL to our own server.
+    my $transporter = XML::Compile::Transport::SOAPHTTP->new(
+        address    => $uri,
+        keep_alive => 1,
+        # for SSL handling we need our own LWP Agent
+        user_agent => LWP::UserAgent->new(
+            ssl_opts => { # default is SSL verification on
+                # NOTE: PERL_LWP_SSL_VERIFY_MODE is not an "official" env variable
+                verify_hostname => $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'} // 1,
+                SSL_verify_mode => $ENV{'PERL_LWP_SSL_VERIFY_MODE'}     // SSL_VERIFY_PEER,
+            },            
+        ),
+    );
 
-	# enable cookies for zimbra Auth
-	my $ua = $transporter->userAgent();
-	$ua->cookie_jar({ file => "$ENV{HOME}/.cookies.txt" });
+    # enable cookies for zimbra Auth
+    my $ua = $transporter->userAgent();
+    $ua->cookie_jar({ file => "$ENV{HOME}/.cookies.txt" });
 
-	my $send = $transporter->compileClient( port => $port );
+    my $send = $transporter->compileClient( port => $port );
 
-	# Compile all service methods
-	for my $soapOp ( $self->wsdl->operations( port => $port ) ) {
-		if ($self->debug) {
-			my $msg = sprintf "got soap operation %s", $soapOp->name;
-			warn $msg;
-		}
-		$soapOps->{ $soapOp->name } =
-		$self->wsdl->compileClient(
-			$soapOp->name,
-			port      => $port,
-			service   => $name,
-			transport => $send,
-		);
-	}
-	return $soapOps;
+    # Compile all service methods
+    for my $soapOp ( $self->wsdl->operations( port => $port ) ) {
+        if ($self->debug) {
+            my $msg = sprintf "got soap operation %s", $soapOp->name;
+            warn $msg;
+        }
+        $soapOps->{ $soapOp->name } =
+        $self->wsdl->compileClient(
+            $soapOp->name,
+            port      => $port,
+            service   => $name,
+            transport => $send,
+        );
+    }
+    return $soapOps;
 };
 
 =head1 METHODS
@@ -301,29 +301,29 @@ Calls Zimbra with the given argument and returns the SOAP response as perl hash.
 =cut
 
 sub call {
-	my $self = shift;
-	my $action = shift;
-	my $args = shift;
+    my $self = shift;
+    my $action = shift;
+    my $args = shift;
 
-	$self->log->debug(dumper { _function => 'ZimbraManager::Soap::call',
-							   action => $action,
-							   args => $args });
+    $self->log->debug(dumper { _function => 'ZimbraManager::Soap::call',
+                               action => $action,
+                               args => $args });
 
-	my ( $response, $trace ) = $self->soapOps->{$action}->($args);
-	if ($self->soapDebug) {
-		$self->log->debug(dumper ("call(): response=", $response));
-		$self->log->debug(dumper ("call(): trace=", $trace));
-	}
-	my $err;
-	if ( not defined $response or $response->{Fault} ) {
-		$err = 'SOAP ERROR from Zimbra: '. $response->{Fault}->{faultstring};
-		if ($self->soapErrorsToConsumer) {
-			my $msg1    = 'response: ' . sprintf "%s", dumper $response;
-			my $msg2    = 'trace:    ' . sprintf "%s", dumper $trace;
-			$err .= "\n\n\n$msg1\n$msg2\n";
-		}
-	}
-	return ($response->{parameters}, $err);
+    my ( $response, $trace ) = $self->soapOps->{$action}->($args);
+    if ($self->soapDebug) {
+        $self->log->debug(dumper ("call(): response=", $response));
+        $self->log->debug(dumper ("call(): trace=", $trace));
+    }
+    my $err;
+    if ( not defined $response or $response->{Fault} ) {
+        $err = 'SOAP ERROR from Zimbra: '. $response->{Fault}->{faultstring};
+        if ($self->soapErrorsToConsumer) {
+            my $msg1    = 'response: ' . sprintf "%s", dumper $response;
+            my $msg2    = 'trace:    ' . sprintf "%s", dumper $trace;
+            $err .= "\n\n\n$msg1\n$msg2\n";
+        }
+    }
+    return ($response->{parameters}, $err);
 }
 
 1;
