@@ -1,0 +1,17 @@
+{
+	"folders":
+	[
+		{
+			"follow_symlinks": false,
+			"name": "ZimbraManager",
+			"path": ".",
+			"file_exclude_patterns": ["*~",".nfs*","zm.sublime-project"],
+		},
+		
+	],
+	    "settings": 
+    {
+        "tab_size": 4
+    }
+
+}
