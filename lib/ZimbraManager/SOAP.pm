@@ -1,4 +1,4 @@
-package ZimbraManager::Soap;
+package ZimbraManager::SOAP;
 
 use Mojo::Base -base;
 
