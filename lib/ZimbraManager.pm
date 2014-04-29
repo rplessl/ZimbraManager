@@ -19,21 +19,6 @@ Examples in Webbrowser:
 
     http://localhost:3000/auth?user=adminuser&password=MyAdminPassword
 
-
-    http://localhost:3000/getAccountInfo?user=roman@zimbra.example.com&plain=yes
-
-    http://localhost:3000/getAccountInfo?user=roman@zimbra.example.com
-
-
-    http://localhost:3000/getAccount?user=roman@zimbra.example.com&plain=yes
-
-    http://localhost:3000/getAccount?user=roman@zimbra.example.com
-
-
-    http://localhost:3000/getAllAccounts?name=zimbra.example.com&domain=zimbra.example.com&plain=yes
-
-    http://localhost:3000/getAllAccounts?name=zimbra.example.com&domain=zimbra.example.com
-
 =cut
 
 use Mojo::Util qw(dumper);
@@ -41,7 +26,7 @@ use Mojo::JSON qw(decode_json encode_json);
 
 use ZimbraManager::Soap;
 
-use 5.14.0;
+use HTTP::CookieJar::LWP;
 
 =head1 ATTRIBUTES
 
@@ -56,7 +41,8 @@ has 'soap' => sub {
     return ZimbraManager::Soap->new(
         log => $self->log,
         mode => 'full',
-        soapDebug => '1',
+        # soapDebug => '1',           # enables SOAP backend communication debugging
+        # soapErrorsToConsumer => '1' # returns SOAP error to consumer
     );
 };
 
@@ -80,59 +66,51 @@ sub startup {
 
     my $r = $self->routes;
 
-    # Default routing is done with POST requests
-    $r->post('/:call' => sub {
-        my $ctrl  = shift;
-        my $call  = $ctrl->param('call');
-        my $plain = $ctrl->param('plain');
-        my $ret;
-        my $err;
-        my $perl_args = decode_json($ctrl->req->body);
-        ($ret, $err) = $self->soap->call($call, $perl_args);
+    # Special routing for authentication function for session handling
+    $r->post('/auth' => sub {
+        my $ctrl        = shift;
+        my $perl_args   = decode_json($ctrl->req->body);
+        my $user        = $perl_args->{'user'};
+        my $password    = $perl_args->{'password'};
+        my $plain       = $perl_args->{'plain'};
+        my ($ret, $err) = $self->handleZimbraAuth($ctrl, $user, $password);
         $self->renderOutput($ctrl, $ret, $err, $plain);
     });
 
-    # Special routing for with GET requests
-    # especially auth is used for session handling
-    $r->get('/:call' => sub {
-        my $ctrl  = shift;
-        my $call  = $ctrl->param('call');
-        my $plain = $ctrl->param('plain');
-        my $ret;
-        my $err;
-        if ($call eq 'auth') {
-            my $user     = $ctrl->param('user');
-            my $password = $ctrl->param('password');
-            if ($self->sessions('ZM_ADMIN_AUTH_TOKEN')) {
-                $ret = 'true';
-            } 
-            else {
-                ($ret, $err) = $self->soap->call( buildAuth($user,$password) );
-            }
-            $ret = { auth => 'Authentication sucessful!' } if ($ret);
-        }
-        # START: Proof-Of-Example and Debug Code
-        elsif ($call eq 'getAccount') {
-            my $user = $ctrl->param('user');
-            ($ret, $err) = $self->soap->call( buildGetAccount($user) );
-        }
-        elsif ($call eq 'getAccountInfo') {
-            my $user = $ctrl->param('user');
-            ($ret, $err) = $self->soap->call( buildGetAccountInfo($user) );
-        }
-        elsif ($call eq 'getAllAccounts') {
-            my $name = $ctrl->param('name');
-            my $domain = $ctrl->param('domain');
-            ($ret, $err) = $self->soap->call( buildGetAllAccounts($name, $domain) );
-            $ret = helperHashingAllAccounts($ret) unless ($err);
-        }
-        # END: Proof-Of-Example and Debug Code
-        else {
-            my %params;
-            ($ret, $err) = $self->soap->call($call, \%params);
-        }
+    $r->get('/auth' => sub {
+        my $ctrl        = shift;
+        my $user        = $ctrl->param('user');
+        my $password    = $ctrl->param('password');
+        my $plain       = $ctrl->param('plain');
+        my ($ret, $err) = $self->handleZimbraAuth($ctrl, $user, $password);
         $self->renderOutput($ctrl, $ret, $err, $plain);
-    });    
+    });
+
+    # Normal routing is done with POST requests
+    $r->post('/:call' => sub {
+        my $ctrl        = shift;
+        my $call        = $ctrl->param('call');
+        my $plain       = $ctrl->param('plain');
+        my $perl_args   = decode_json($ctrl->req->body);
+        my ($ret, $err) = $self->soap->call($call, $perl_args, $ctrl->session('ZM_ADMIN_AUTH_TOKEN'));
+        $self->renderOutput($ctrl, $ret, $err, $plain);
+    });
+
+    # But is also possible with special GET requests
+    $r->get('/:call' => sub {
+        my $ctrl        = shift;
+        my $call        = $ctrl->param('call');
+        my $plain       = $ctrl->param('plain');
+        my @param_names = $ctrl->param;
+        my $params;
+        for my $p (@param_names) {
+            $params->{$p} = $ctrl->param($p) unless (($p eq 'call') or ($p eq 'plain'));
+        }
+        my ($ret, $err) = $self->soap->call($call, $params, $ctrl->session('ZM_ADMIN_AUTH_TOKEN'));
+        $self->renderOutput($ctrl, $ret, $err, $plain);
+    });
+
+    return 0;
 }
 
 =head2 renderOutput
@@ -154,17 +132,47 @@ sub renderOutput {
         $ctrl->render(text => "<pre>$text</pre>") if ($plain);
     }
     else {
-        $ctrl->render(json => $text);        
+        $ctrl->render(json => $text);
     }
 }
 
-=head2 buildAuth
+=head2 handleZimbraAuth
+
+Handle the authentication to Zimbra and store the Zimbra authentication
+token to the Mojolicious session of the consumer. So the auth token will
+be transparently taken to from consumer to the Zimbra end system.
+
+=cut
+
+sub handleZimbraAuth {
+    my $self     = shift;
+    my $ctrl     = shift;
+    my $user     = shift;
+    my $password = shift;
+    my $ret;
+    my $err;
+    if ($ctrl->session('ZM_ADMIN_AUTH_TOKEN')) {
+        $ret = 'true';
+    }
+    else {
+        ($ret, $err) = $self->soap->call( buildAuthRequest($user,$password), undef );
+        if (!$err) {
+           my $token = $ret->{authToken};
+           $ctrl->session('ZM_ADMIN_AUTH_TOKEN' => $token);
+        }
+        $self->log->debug(dumper("User Session",$ctrl->session));
+    }
+    $ret = { auth => 'Authentication sucessful!' } if ($ret);
+    return ($ret, $err);
+}
+
+=head2 buildAuthRequest
 
 Builds auth call for SOAP
 
 =cut
 
-sub buildAuth { 
+sub buildAuthRequest {
      my $user = shift;
      my $password = shift;
      return (
@@ -175,82 +183,6 @@ sub buildAuth {
                  by => 'name', 
                   _ => $user}}
     );
-}
-
-=head2 Proof-Of-Example GET SOAP Call wrappers
-
-=head3 buildGetAccountInfo
-
-Builds getAccountInfo call for SOAP
-
-=cut
-
-sub buildGetAccountInfo {
-    my $user = shift;    
-    return (
-         'getAccountInfoRequest', 
-         { account => { 
-                    by => 'name', 
-                    _  => $user}}
-    );    
-}
-
-=head3 buildGetAccount
-
-Builds getAccount call for SOAP
-
-=cut
-
-sub buildGetAccount {
-    my $user = shift;    
-    return (
-         'getAccountRequest', 
-         { account => { 
-                    by => 'name', 
-                    _  => $user}}
-    );    
-}
-
-=head3 buildGetAllAccount
-
-Builds getAllAccount call for SOAP
-
-=cut
-
-sub buildGetAllAccounts {
-    my $name = shift;
-    my $domain = shift;
-    return (    
-         'getAllAccountsRequest', 
-         { server => { 
-                   by => 'name', 
-                    _ => $name }, 
-           domain => { 
-                   by => 'name', 
-                    _ => $domain }}
-    );
-}
-
-=head3 helperHashingAllAccounts
-
-Helper function for processing AllAccounts SOAP call
-
-=cut
-
-sub helperHashingAllAccounts {
-    my $ret = shift;
-    my $accounts;
-    for my $za ( @{ $ret->{account} } ) {
-        my $name = $za->{name};
-        my $id = $za->{id};
-        my %kv = map { $_->{'n'} => $_->{'_'} } @{$za->{a}};
-        $accounts->{$name} = {
-            'name' => $name,
-            'id' => $id,
-            'kv' => \%kv,
-        };
-    }
-    return $accounts;
 }
 
 1;
@@ -283,5 +215,6 @@ S<Roman Plessl E<lt>roman.plessl@oetiker.chE<gt>>
 =head1 HISTORY
 
  2014-03-20 rp Initial Version
+ 2014-04-29 rp New API and added handling of sessions
 
 =cut
