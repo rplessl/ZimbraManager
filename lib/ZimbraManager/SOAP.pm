@@ -15,14 +15,17 @@ ZimbraManager::Soap - class to manage Zimbra with perl and SOAP
         return ZimbraManager::Soap->new(
             log => $self->log,
             mode => 'full' # or 'admin' or 'user'
+            # soapDebug => '1', # enables SOAP backend communication debugging
+            # soapErrorsToConsumer => '1' # returns SOAP error to consumer
+
         );
     };
 
-    my $ret = $self->soap->call(FUNCTION, %PARAMS));
+    my $ret = $self->soap->call(FUNCTION, %PARAMS, $AUTHTOKEN));
 
 =head1 DESCRIPTION
 
-Helper Class for Zimbra adminstration interface.
+Helper class for Zimbra adminstration interface.
 
 =cut
 
@@ -36,7 +39,7 @@ use XML::Compile::SOAP11;
 use XML::Compile::SOAP::Trace;
 use XML::Compile::Transport::SOAPHTTP;
 
-use 5.14.0;
+use HTTP::CookieJar::LWP;
 
 =head1 ATTRIBUTES
 
@@ -48,7 +51,9 @@ The mojo log object
 
 =cut
 
-has 'log';
+has 'log' => sub {
+    return Mojo::Log->new();
+};
 
 =head3 soapDebug
 
@@ -85,29 +90,6 @@ The zimbra SOAP interface has three modes:
 has 'mode' => sub {
     my $self = shift;
     return 'full';
-};
-
-=head2 zcsService
-
-Internal WSDL name for selecting mode
-
-=cut
-
-has 'zcsService' => sub {
-    my $self = shift;
-    my $mode = $self->mode;
-    if    ($mode eq 'admin') {
-        return 'zcsAdminService';
-    }
-    elsif ($mode eq 'user') {
-        return 'zcsService';
-    }
-    elsif ($mode eq 'full') {
-        return 'zcsAdminService';
-    }
-    else {
-        die "no valid mode ($self->mode) for attribute zcsService has been set";
-    }
 };
 
 =head2 wsdlPath
@@ -177,7 +159,30 @@ has 'wsdl' => sub {
     return $wsdl;
 };
 
-=head2 returnParameterName
+=head2 zcsService
+
+Internal WSDL name for selecting mode
+
+=cut
+
+has 'zcsService' => sub {
+    my $self = shift;
+    my $mode = $self->mode;
+    if    ($mode eq 'admin') {
+        return 'zcsAdminService';
+    }
+    elsif ($mode eq 'user') {
+        return 'zcsService';
+    }
+    elsif ($mode eq 'full') {
+        return 'zcsAdminService';
+    }
+    else {
+        die "no valid mode ($self->mode) for attribute zcsService has been set";
+    }
+};
+
+=head2 wsdlReturnParameterName
 
 Name of the return value / structure
 
@@ -203,7 +208,7 @@ In Zimbra 8.0.6 and previous versions this has been 'parameters' as defined here
 
 =cut
 
-has 'returnParameterName' => sub {
+has 'wsdlReturnParameterName' => sub {
     return 'params';
 };
 
@@ -246,7 +251,7 @@ has 'service' => sub {
             }
         }
     }
-    return $zimbraServices;
+    return $zimbraServices->{$self->zcsService};
 };
 
 =head2 soapOps
@@ -256,17 +261,13 @@ mode.
 
 =cut
 
-has 'soapOps' => sub {
+has 'transporter' => sub {
     my $self = shift;
-    my $soapOps;
 
-    my $zcsService = $self->zcsService;
-    my $uri  = $self->service->{$zcsService}->{uri};
-    my $port = $self->service->{$zcsService}->{port_name};
-    my $name = $self->service->{$zcsService}->{name};
+    my $uri  = $self->service->{uri};
 
-    my $verifyHostname = $ENV{ERL_LWP_SSL_VERIFY_HOSTNAME} // 1;
-    my $verifyMode     = $ENV{ERL_LWP_SSL_VERIFY_MODE}     // SSL_VERIFY_PEER;
+    my $verifyHostname = $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} // 1;
+    my $verifyMode     = $ENV{PERL_LWP_SSL_VERIFY_MODE}     // SSL_VERIFY_PEER;
 
     # redirect the endpoint as specified in the WSDL to our own server.
     my $transporter = XML::Compile::Transport::SOAPHTTP->new(
@@ -285,11 +286,16 @@ has 'soapOps' => sub {
     $self->log->debug("LWP_SSL_VERIFY_HOSTNAME = $verifyHostname\n"
                     . "LWP_SSL_VERIFY_MODE     = $verifyMode");
 
-    # enable cookies for zimbra Auth
-    my $ua = $transporter->userAgent();
-    $ua->cookie_jar({ file => "$ENV{HOME}/.cookies.txt" });
+    return $transporter;
+};
 
-    my $send = $transporter->compileClient( port => $port );
+has 'soapOps' => sub {
+    my $self = shift;
+    my $soapOps;
+
+    my $port = $self->service->{port_name};
+    my $name = $self->service->{name};
+    my $send = $self->transporter->compileClient( port => $port );
 
     # Compile all service methods
     for my $soapOp ( $self->wsdl->operations( port => $port ) ) {
@@ -316,9 +322,23 @@ Calls Zimbra with the given argument and returns the SOAP response as perl hash.
 =cut
 
 sub call {
-    my $self = shift;
-    my $action = shift;
-    my $args = shift;
+    my $self      = shift;
+    my $action    = shift;
+    my $args      = shift;
+    my $authToken = shift;
+
+    $self->log->debug(dumper($action, $args, $authToken));
+
+    my $uri = $self->service->{uri};
+
+    # for each controller request build authentication token with cookieJar
+    # HTTP::CookieJar::LWP is compatible with the original LWP cookie
+    # mechanism but lightweight
+
+    my $cookieJar = HTTP::CookieJar::LWP->new();
+       $cookieJar->add( $uri, "ZM_ADMIN_AUTH_TOKEN=$authToken" );
+    my $ua = $self->transporter->userAgent();
+       $ua->cookie_jar($cookieJar);
 
     $self->log->debug( dumper { _function => 'ZimbraManager::Soap::call',
                                 action => $action,
@@ -345,7 +365,7 @@ sub call {
             $err .= "\n\n\n$response\n\n$trace\n";
         }
     }
-    return ($response->{$self->returnParameterName}, $err);
+    return ($response->{$self->wsdlReturnParameterName}, $err);
 }
 
 1;
@@ -378,7 +398,8 @@ S<Roman Plessl E<lt>roman.plessl@oetiker.chE<gt>>
 =head1 HISTORY
 
  2014-03-20 rp Initial Version
- 2014-03-27 rp Improved Version (Errors, SSL)
+ 2014-03-27 rp Improved Error and SSL Handling
+ 2014-04-29 rp Improved API and Session Handing
 
 =cut
 
