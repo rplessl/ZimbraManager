@@ -50,6 +50,84 @@ has 'soap' => sub {
 
 All the methods of L<Mojo::Base> plus:
 
+=head2 private functions
+
+Private functions used in the startup function
+
+=cut
+
+=head3 renderOutput
+
+Renders the Output in JSON or readable plain text
+
+=cut
+
+my $renderOutput = sub {
+    my ($self, $ctrl, $ret, $err, $plain) = @_;
+    my $text = $err ? $err : $ret;
+    if ($err) {
+        $ctrl->res->code(510);
+    }
+    if ($plain) {
+        if (ref $text eq 'HASH') {
+            $text = dumper $text;
+        }
+        $ctrl->render(text => "<pre>$text</pre>") if ($plain);
+    }
+    else {
+        $ctrl->render(json => $text);
+    }
+};
+
+=head3 buildAuthRequest
+
+Builds auth call for SOAP
+
+=cut
+
+my $buildAuthRequest = sub {
+     my $user = shift;
+     my $password = shift;
+     return (
+     'authRequest',
+    { persistAuthTokenCookie => 1,
+           password => $password,
+            account =>  {
+                 by => 'name',
+                  _ => $user}}
+    );
+};
+
+=head3 handleZimbraAuth
+
+Handle the authentication to Zimbra and store the Zimbra authentication
+token to the Mojolicious session of the consumer. So the auth token will
+be transparently taken to from consumer to the Zimbra end system.
+
+=cut
+
+my $handleZimbraAuth = sub {
+    my $self     = shift;
+    my $ctrl     = shift;
+    my $user     = shift;
+    my $password = shift;
+    my $ret;
+    my $err;
+    if ($ctrl->session('ZM_ADMIN_AUTH_TOKEN')) {
+        $ret = 'true';
+    }
+    else {
+        ($ret, $err) = $self->soap->call( $buildAuthRequest->($user,$password), undef );
+        if (!$err) {
+           my $token = $ret->{authToken};
+           $ctrl->session('ZM_ADMIN_AUTH_TOKEN' => $token);
+        }
+        $self->log->debug(dumper("User Session",$ctrl->session));
+    }
+    $ret = { auth => 'Authentication sucessful!' } if ($ret);
+    return ($ret, $err);
+};
+
 =head2 startup
 
 Calls Zimbra with the given argument and returns the SOAP response as perl hash.
@@ -73,8 +151,8 @@ sub startup {
         my $user        = $perl_args->{'user'};
         my $password    = $perl_args->{'password'};
         my $plain       = $perl_args->{'plain'};
-        my ($ret, $err) = $self->handleZimbraAuth($ctrl, $user, $password);
-        $self->renderOutput($ctrl, $ret, $err, $plain);
+        my ($ret, $err) = $handleZimbraAuth->($self, $ctrl, $user, $password);
+        $renderOutput->($self, $ctrl, $ret, $err, $plain);
     });
 
     $r->get('/auth' => sub {
@@ -82,8 +160,8 @@ sub startup {
         my $user        = $ctrl->param('user');
         my $password    = $ctrl->param('password');
         my $plain       = $ctrl->param('plain');
-        my ($ret, $err) = $self->handleZimbraAuth($ctrl, $user, $password);
-        $self->renderOutput($ctrl, $ret, $err, $plain);
+        my ($ret, $err) = $handleZimbraAuth->($self, $ctrl, $user, $password);
+        $renderOutput->($self, $ctrl, $ret, $err, $plain);
     });
 
     # Normal routing is done with POST requests
@@ -93,7 +171,7 @@ sub startup {
         my $plain       = $ctrl->param('plain');
         my $perl_args   = decode_json($ctrl->req->body);
         my ($ret, $err) = $self->soap->call($call, $perl_args, $ctrl->session('ZM_ADMIN_AUTH_TOKEN'));
-        $self->renderOutput($ctrl, $ret, $err, $plain);
+        $renderOutput->($self, $ctrl, $ret, $err, $plain);
     });
 
     # But is also possible with special GET requests
@@ -107,83 +185,13 @@ sub startup {
             $params->{$p} = $ctrl->param($p) unless (($p eq 'call') or ($p eq 'plain'));
         }
         my ($ret, $err) = $self->soap->call($call, $params, $ctrl->session('ZM_ADMIN_AUTH_TOKEN'));
-        $self->renderOutput($ctrl, $ret, $err, $plain);
+        $renderOutput->($self, $ctrl, $ret, $err, $plain);
     });
 
     return 0;
 }
 
-=head2 renderOutput
 
-Renders the Output in JSON or readable plain text
-
-=cut
-
-sub renderOutput {
-    my ($self, $ctrl, $ret, $err, $plain) = @_;
-    my $text = $err ? $err : $ret;
-    if ($err) {
-        $ctrl->res->code(510);
-    }
-    if ($plain) {
-        if (ref $text eq 'HASH') {
-            $text = dumper $text;
-        }
-        $ctrl->render(text => "<pre>$text</pre>") if ($plain);
-    }
-    else {
-        $ctrl->render(json => $text);
-    }
-}
-
-=head2 handleZimbraAuth
-
-Handle the authentication to Zimbra and store the Zimbra authentication
-token to the Mojolicious session of the consumer. So the auth token will
-be transparently taken to from consumer to the Zimbra end system.
-
-=cut
-
-sub handleZimbraAuth {
-    my $self     = shift;
-    my $ctrl     = shift;
-    my $user     = shift;
-    my $password = shift;
-    my $ret;
-    my $err;
-    if ($ctrl->session('ZM_ADMIN_AUTH_TOKEN')) {
-        $ret = 'true';
-    }
-    else {
-        ($ret, $err) = $self->soap->call( buildAuthRequest($user,$password), undef );
-        if (!$err) {
-           my $token = $ret->{authToken};
-           $ctrl->session('ZM_ADMIN_AUTH_TOKEN' => $token);
-        }
-        $self->log->debug(dumper("User Session",$ctrl->session));
-    }
-    $ret = { auth => 'Authentication sucessful!' } if ($ret);
-    return ($ret, $err);
-}
-
-=head2 buildAuthRequest
-
-Builds auth call for SOAP
-
-=cut
-
-sub buildAuthRequest {
-     my $user = shift;
-     my $password = shift;
-     return (
-     'authRequest', 
-    { persistAuthTokenCookie => 1, 
-           password => $password, 
-            account =>  { 
-                 by => 'name', 
-                  _ => $user}}
-    );
-}
 
 1;
 

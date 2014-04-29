@@ -336,7 +336,7 @@ sub call {
     # mechanism but lightweight
 
     my $cookieJar = HTTP::CookieJar::LWP->new();
-       $cookieJar->add( $uri, "ZM_ADMIN_AUTH_TOKEN=$authToken" );
+       $cookieJar->add( $uri, "ZM_ADMIN_AUTH_TOKEN=$authToken" ) if (defined $authToken);
     my $ua = $self->transporter->userAgent();
        $ua->cookie_jar($cookieJar);
 
