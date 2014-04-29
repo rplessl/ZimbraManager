@@ -59,77 +59,67 @@ Calls Zimbra with the given argument and returns the SOAP response as perl hash.
 =cut
 
 
+
 my $map = {
-
-    functionA => {
+    auth => {
         args => [ qw(password accountName)],
-        out => sub {
-            my ($arg1,$arg2,$arg3) = @_;
-            return {
-                password => $args1,
-                account => {
-                        by => 'name',
-                        _ => $args2
-                }
-            }
-        } 
-    }
-}
-
-
-=head2 Proof-Of-Example GET SOAP Call wrappers
-
-=head3 buildGetAccountInfo
-
-Builds getAccountInfo call for SOAP
-
-=cut
-
-sub buildGetAccountInfo {
-    my $user = shift;    
-    return (
-         'getAccountInfoRequest', 
-         { account => { 
-                    by => 'name', 
-                    _  => $user}}
-    );    
-}
-
-=head3 buildGetAccount
-
-Builds getAccount call for SOAP
-
-=cut
-
-sub buildGetAccount {
-    my $user = shift;    
-    return (
-         'getAccountRequest', 
-         { account => { 
-                    by => 'name', 
-                    _  => $user}}
-    );    
-}
-
-=head3 buildGetAllAccount
-
-Builds getAllAccount call for SOAP
-
-=cut
-
-sub buildGetAllAccounts {
-    my $name = shift;
-    my $domain = shift;
-    return (    
-         'getAllAccountsRequest', 
-         { server => { 
-                   by => 'name', 
-                    _ => $name }, 
-           domain => { 
-                   by => 'name', 
-                    _ => $domain }}
-    );
-}
+        out  => sub {
+            my ($password, $accountName) = @_;
+            return {    persistAuthTokenCookie => 1,
+                        password => $password,
+                        account =>  {
+                            by => 'name',
+                            _ => $accountName} };
+        },
+    },
+    getAccountInfo => {
+        args => [ qw(accountName)],
+        out  => sub {
+            my ($accountName) = @_;
+            return {   account => {
+                            by => 'name',
+                            _  => $accountName} };
+        },
+    },
+    getAccount => {
+        args => [ qw(accountName)],
+        out  => sub {
+            my ($accountName) = @_;
+            return {   account => {
+                            by => 'name',
+                            _  => $accountName} };
+        },
+    },
+    getAllAccounts => {
+        args => [ qw(serverName domainName)],
+        out  => sub {
+            my ($serverName, $domainName) = @_;
+            return {    server => {
+                            by => 'name',
+                            _ => $serverName },
+                        domain => {
+                            by => 'name',
+                            _ => $domainName } };
+        },
+    },
+    getAllDomains => {
+        args => [ ],
+        out  => sub {
+            return { {} };
+        },
+    },
+    modifyAccount => {
+        args => [ qw(zimbraUUID modifyKey modifyValue)],
+        out  => sub {
+            my ($zimbraUUID, $modifyKey, $modifyValue ) = @_;
+            return {    id => $zimbraUUID,
+                        a => {
+                            n => $modifyKey,
+                            _ => $modifyValue,
+                        } };
+        },
+    },
+};
 
 =head3 helperHashingAllAccounts
 
@@ -137,7 +127,7 @@ Helper function for processing AllAccounts SOAP call
 
 =cut
 
-sub helperHashingAllAccounts {
+my $helperHashingAllAccounts = sub {
     my $ret = shift;
     my $accounts;
     for my $za ( @{ $ret->{account} } ) {
@@ -153,25 +143,6 @@ sub helperHashingAllAccounts {
     return $accounts;
 }
 
-
-# START: Proof-Of-Example and Debug Code
-        elsif ($call eq 'getAccount') {
-            my $user = $ctrl->param('user');
-            ($ret, $err) = $self->soap->call( buildGetAccount($user) );
-        }
-        elsif ($call eq 'getAccountInfo') {
-            my $user = $ctrl->param('user');
-            ($ret, $err) = $self->soap->call( buildGetAccountInfo($user) );
-        }
-        elsif ($call eq 'getAllAccounts') {
-            my $name = $ctrl->param('name');
-            my $domain = $ctrl->param('domain');
-            ($ret, $err) = $self->soap->call( buildGetAllAccounts($name, $domain) );
-            $ret = helperHashingAllAccounts($ret) unless ($err);
-        }
-        # END: Proof-Of-Example and Debug Code
-
-1;
 
 __END__
 
@@ -201,7 +172,7 @@ S<Roman Plessl E<lt>roman.plessl@oetiker.chE<gt>>
 =head1 HISTORY
 
  2014-04-29 rp Initial Version
- 
+
 =cut
 
 # Emacs Configuration
