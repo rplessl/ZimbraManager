@@ -58,8 +58,6 @@ Calls Zimbra with the given argument and returns the SOAP response as perl hash.
 
 =cut
 
-
-
 my $map = {
     auth => {
         args => [ qw(password accountName)],
@@ -69,7 +67,8 @@ my $map = {
                         password => $password,
                         account =>  {
                             by => 'name',
-                            _ => $accountName} };
+                            _ => $accountName}
+                    };
         },
     },
     getAccountInfo => {
@@ -78,7 +77,8 @@ my $map = {
             my ($accountName) = @_;
             return {   account => {
                             by => 'name',
-                            _  => $accountName} };
+                            _  => $accountName}
+                    };
         },
     },
     getAccount => {
@@ -87,7 +87,8 @@ my $map = {
             my ($accountName) = @_;
             return {   account => {
                             by => 'name',
-                            _  => $accountName} };
+                            _  => $accountName}
+                    };
         },
     },
     getAllAccounts => {
@@ -96,16 +97,11 @@ my $map = {
             my ($serverName, $domainName) = @_;
             return {    server => {
                             by => 'name',
-                            _ => $serverName },
+                            _  => $serverName },
                         domain => {
                             by => 'name',
-                            _ => $domainName } };
-        },
-    },
-    getAllDomains => {
-        args => [ ],
-        out  => sub {
-            return { {} };
+                            _  => $domainName }
+                    };
         },
     },
     modifyAccount => {
@@ -115,8 +111,94 @@ my $map = {
             return {    id => $zimbraUUID,
                         a => {
                             n => $modifyKey,
-                            _ => $modifyValue,
-                        } };
+                            _ => $modifyValue }
+                        }
+                    };
+        },
+    },
+    getAllDomains => {
+        args => [ ],
+        out  => sub {
+            return { {} };
+        },
+    },
+    getDomainInfo => {
+        args => [ qw(domainName)],
+        out  => sub {
+            my $domainName = shift;
+            return {    domain => {
+                            by => 'name',
+                            _  => $domainName }
+                    };
+        },
+    },
+    createAccount => {
+        args => [ qw(uid defaultEmailDomain plainPassword givenName surName country displayName localeLang cosId) ],
+        out  => sub {
+            my ($uid, $defaultEmailDomain, $plainPassword, $givenName, $surName, $country, $displayName, $localeLang, $cosId) = @_;
+            return {
+                name     => $uid . '@' . $defaultEmailDomain,
+                password => $plainPassword,
+                a => [
+                        {
+                            n => 'givenName',
+                            _ => $givenName,
+                        },
+                        {
+                            n => 'sn',
+                            _ => $surName,
+                        },
+                        {
+                            n => 'c',
+                            _ => $country,
+                        },
+                        {
+                            n => 'displayName',
+                            _ => $displayName,
+                        },
+                        {
+                            n => 'zimbraPrefLocale',
+                            _ => $localeLang,
+                        },
+                        {
+                            n => 'zimbraPasswordMustChange',
+                            _ => 'FALSE',
+                        },
+                        {
+                            n => 'zimbraCOSid',
+                            _ => $config->{General}->{defaultCOS},
+                        },
+                ],
+            };
+        },
+    },
+    addAccountAlias => {
+        args => [ qw(zimbraUUID emailAlias) ],
+        out  => sub {
+            my ($zimbraUUID, $emailAlias) = @_;
+            return {
+                id => $zimbraUUID,
+                alias => $emailAlias
+            };
+        },
+    },
+    removeAccountAlias => {
+        args => [ qw(zimbraUUID emailAlias) ],
+        out  => sub {
+            my ($zimbraUUID, $emailAlias) = @_;
+            return {
+                id => $zimbraUUID,
+                alias => $emailAlias
+            };
+        },
+    },
+    deleteAccount => {
+        args => [ qw(zimbraUUID) ],
+        out  => sub {
+            my ($zimbraUUID) = @_;
+            return {
+                id => $zimbraUUID
+            };
         },
     },
 };
