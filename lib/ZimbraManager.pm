@@ -24,7 +24,7 @@ Examples in Webbrowser:
 use Mojo::Util qw(dumper);
 use Mojo::JSON qw(decode_json encode_json);
 
-use ZimbraManager::Soap;
+use ZimbraManager::SOAP;
 
 use HTTP::CookieJar::LWP;
 
@@ -38,7 +38,7 @@ The ZimbraManager SOAP object
 
 has 'soap' => sub {
     my $self = shift;
-    return ZimbraManager::Soap->new(
+    return ZimbraManager::SOAP->new(
         log => $self->log,
         mode => 'full',
         # soapDebug => '1',           # enables SOAP backend communication debugging
