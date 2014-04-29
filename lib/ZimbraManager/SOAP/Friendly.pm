@@ -10,11 +10,6 @@ ZimbraManager::Soap::Friendly - class to manage Zimbra with perl and SOAP
 
     use ZimbraManager::Soap::Friendly;
 
-    my %params = {
-        username => 'USERNAME',
-        password => 'PASSWORD',
-    }
-
     my $ret = $self->soap->callFriendly(functionname, %params, $authtoken));
 
 =head1 USAGE
@@ -238,18 +233,33 @@ sub callFriendly {
     $self->log->debug(dumper($action, $args, $authToken));
 
     # check input
-    if (not exist $map->{$action}) {
+    if (not exists $map->{$action}) {
         die "no valid function ($action) given";
+    }
+    if (ref $args ne 'HASH') {
+        die 'parameter $args is not a HASH';
     }
     for $key ($map->{$action}->{args}) {
         if (not exist $args->{key}) {
-            die "necessary key/value pair with key $k not given" 
+            die "function $action: mandatory key/value (key: $k) not given";
         }
     }
 
-    my $soapHash = $map->{$action}->{out}->($)
+    # build argument list
+    my @orderedArgs;
+    for $key ($map->{$action}->{args}) {
+        push @orderedArgs, $args->{$key};
+    }
+    my $soapArgsBuild = $map->{$action}->{out}->(@orderedArgs);
 
+    # build SOAP action name
+    my $action .= 'Request';
 
+    $self->log->debug(dumper($action, $soapArgsBuild, $authToken));
+
+    return {
+        $self->soap->call($action, $soapArgsBuild, $authToken)
+    };
 }
 
 
