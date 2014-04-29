@@ -54,8 +54,6 @@ All the methods of L<Mojo::Base> plus:
 
 Private functions used in the startup function
 
-=cut
-
 =head3 renderOutput
 
 Renders the Output in JSON or readable plain text
