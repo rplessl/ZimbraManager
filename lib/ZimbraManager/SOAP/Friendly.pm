@@ -48,18 +48,6 @@ Helper class for Zimbra adminstration with a user friendly interface
 
 =cut
 
-=head1 METHODS
-
-All the methods of L<Mojo::Base> plus:
-
-=head2 callFriendly
-
-Calls Zimbra with the given argument and returns the SOAP response as perl hash.
-
-=cut
-
-
-
 my $map = {
     auth => {
         args => [ qw(password accountName)],
@@ -121,6 +109,14 @@ my $map = {
     },
 };
 
+=head1 METHODS
+
+All the methods of L<Mojo::Base> plus:
+
+=head2 private functions
+
+Private functions used in the startup function
+
 =head3 helperHashingAllAccounts
 
 Helper function for processing AllAccounts SOAP call
@@ -141,7 +137,37 @@ my $helperHashingAllAccounts = sub {
         };
     }
     return $accounts;
+};
+
+=head2 callFriendly
+
+Calls Zimbra with the given argument and returns the SOAP response as perl hash.
+
+=cut
+
+sub callFriendly {    
+    my $self      = shift;
+    my $action    = shift;
+    my $args      = shift;
+    my $authToken = shift;
+
+    $self->log->debug(dumper($action, $args, $authToken));
+
+    # check input
+    if (not exist $map->{$action}) {
+        die "no valid function ($action) given";
+    }
+    for $key ($map->{$action}->{args}) {
+        if (not exist $args->{key}) {
+            die "necessary key/value pair with key $k not given" 
+        }
+    }
+
+    my $soapHash = $map->{$action}->{out}->($)
+
+
 }
+
 
 
 __END__
