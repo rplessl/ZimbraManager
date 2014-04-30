@@ -254,10 +254,13 @@ has 'service' => sub {
     return $zimbraServices->{$self->zcsService};
 };
 
-=head2 soapOps
+=head2 transporter
 
-All usable SOAP operations exported by the the SOAP interface and with the selected 
-mode.
+Transporter for the SOAP calls - we are using LWP and handle these parameters
+
+    - SSL VERIFY HOSTNAME (see IO::Socket::SSL)
+    - SSL VERIFY MODE     (see IO::Socket::SSL)
+    - HTTP keep_alive
 
 =cut
 
@@ -288,6 +291,13 @@ has 'transporter' => sub {
 
     return $transporter;
 };
+
+=head2 soapOps
+
+All usable SOAP operations exported by the the SOAP interface and with the selected
+mode.
+
+=cut
 
 has 'soapOps' => sub {
     my $self = shift;
