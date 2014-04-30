@@ -1,19 +1,22 @@
 #!/usr/bin/env perl
-
 use strict;
 use warnings;
 
-no if $] >= 5.017011, warnings => 'experimental::smartmatch';
-
-use FindBin;  
+use FindBin;
 use lib "$FindBin::Bin/../thirdparty/lib/perl5";
 use lib "$FindBin::Bin/../lib";
 
 use ZimbraManager;
 
-our $VERSION = "0.1";
+# disable SSL certificate checks
+use IO::Socket::SSL qw( SSL_VERIFY_NONE );
+$ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'} = 0;
+$ENV{'PERL_LWP_SSL_VERIFY_MODE'}     = SSL_VERIFY_NONE;
+
+our $VERSION = "1.0.1";
 
 # Start commands
+require Mojolicious::Commands;
 Mojolicious::Commands->start_app('ZimbraManager');
 
 __END__
@@ -30,11 +33,11 @@ B<zimbra-manager.pl> [I<options>...]
 
 
 Usage
------ 
+-----
 
     $ ./bin/zimbra-manager.pl prefork
 
-or 
+or
 
     $ ./bin/zimbra-manager.pl daemon
 
