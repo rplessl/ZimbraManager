@@ -364,7 +364,7 @@ sub call {
         $err = 'SOAP ERROR from Zimbra: undefined response';
         if ($self->soapErrorsToConsumer) {
             my $trace    = 'trace:    ' . dumper($trace);
-            $err .= "\n\n\n$response\n";
+            $err .= "\n\n\n$trace\n";
         }
     }
     elsif ( $response->{Fault} ) {
