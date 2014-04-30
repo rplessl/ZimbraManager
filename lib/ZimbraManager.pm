@@ -28,6 +28,8 @@ use ZimbraManager::SOAP;
 
 use HTTP::CookieJar::LWP;
 
+our $VERSION = "1.0.1";
+
 =head1 ATTRIBUTES
 
 =head2 soap
