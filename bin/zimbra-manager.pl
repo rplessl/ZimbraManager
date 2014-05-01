@@ -6,8 +6,6 @@ use FindBin;
 use lib "$FindBin::Bin/../thirdparty/lib/perl5";
 use lib "$FindBin::Bin/../lib";
 
-use ZimbraManager;
-
 use Getopt::Long qw(:config posix_default no_ignore_case);
 use Pod::Usage;
 
@@ -15,7 +13,7 @@ my %opt;
 
 # Call GetOptions in BEGIN block as Mojo::Commands eats --help command line option
 BEGIN {
-    GetOptions(\%opt, 'help|h', 'man', 'logfile', 'loglevel') or exit(1);
+    GetOptions(\%opt, 'help|h', 'man', 'logfile=s', 'loglevel=s') or exit(1);
 };
 
 use Mojolicious::Commands;
@@ -28,7 +26,7 @@ if (defined $opt{loglevel}) {
     $ENV{MOJO_LOG_LEVEL} = $opt{loglevel};
 }
 if (defined $opt{logfile}) {
-    $ENV{MOJO_LOG_FILE} = $opt{logfile};
+    $ENV{MOJO_LOG_FILE}  = $opt{logfile};
 }
 
 # disable SSL certificate checks
