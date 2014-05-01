@@ -4,9 +4,9 @@
 #
 # Starts the ZimbraManager daemon
 #
-# chkconfig: 2345 99 35
-# description: Popruxi Server
-# processname: dovecot
+# chkconfig: 2345 90 35
+# description: ZimbraManager Server
+# processname: zimbra-manager.pl
 # config: /etc/sysconfig/ZimbraManager
 # pidfile: /var/run/zimbra-manager.pl.pid
 
@@ -37,8 +37,9 @@ lockfile="/var/lock/subsys/ZimbraManager"
 
 ZIMBRA_MANAGER_USER=${ZIMBRA_MANAGER_USER:-zm_admin}
 ZIMBRA_MANAGER_LOGDIR=${ZIMBRA_MANAGER_LOGDIR:-/var/log/ZimbraManager}
+ZIMBRA_MANAGER_LOGLEVEL=${ZIMBRA_MANAGER_LOGLEVEL:-error}
 
-OPTIONS="--logpath=$ZIMBRA_MANAGER_LOGDIR/ZimbraManager.log --loglevel=error prefork --listen='http://*:13000' &"
+OPTIONS="--logpath=$ZIMBRA_MANAGER_LOGDIR/ZimbraManager.log --loglevel=$ZIMBRA_MANAGER_LOGLEVEL prefork --listen='http://*:13000' &"
 
 start() {
     [ -x $exec ] || exit 5
