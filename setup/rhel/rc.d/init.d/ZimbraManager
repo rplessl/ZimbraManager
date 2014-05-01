@@ -29,7 +29,7 @@ if [ -f /etc/sysconfig/ZimbraManager ]; then
 fi
 
 RETVAL=0
-prog=propruxi
+prog='Zimbra Manager'
 executable="/opt/oss/ZimbraManager/bin/zimbra-manager.pl"
 pidfile="/var/run/zimbra-manager.pl.pid"
 pid=`test -f $pidfile && cat $pidfile`
