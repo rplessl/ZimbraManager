@@ -39,7 +39,7 @@ ZIMBRA_MANAGER_USER=${ZIMBRA_MANAGER_USER:-zm_admin}
 ZIMBRA_MANAGER_LOGDIR=${ZIMBRA_MANAGER_LOGDIR:-/var/log/ZimbraManager}
 ZIMBRA_MANAGER_LOGLEVEL=${ZIMBRA_MANAGER_LOGLEVEL:-error}
 
-OPTIONS="prefork --pid-file=/tmp/Zimbra-Manager-prefork.pid --listen='http://*:13000' --logpath=$ZIMBRA_MANAGER_LOGDIR/ZimbraManager.log --loglevel=$ZIMBRA_MANAGER_LOGLEVEL &"
+OPTIONS="--logfile=$ZIMBRA_MANAGER_LOGDIR/ZimbraManager.log --loglevel=$ZIMBRA_MANAGER_LOGLEVEL prefork --pid-file=/tmp/Zimbra-Manager-prefork.pid --listen='http://*:13000' &"
 
 start() {
     [ -x $exec ] || exit 5
