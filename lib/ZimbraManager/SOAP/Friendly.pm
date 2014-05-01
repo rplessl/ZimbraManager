@@ -6,38 +6,28 @@ use Mojo::Base 'ZimbraManager::SOAP';
 
 ZimbraManager::Soap::Friendly - class to manage Zimbra with perl and SOAP
 
-=head1 SYNOPSIS
-
-    use ZimbraManager::Soap::Friendly;
-
-    my $ret = $self->soap->callFriendly(functionname, %params, $authtoken));
-
-=head1 USAGE
-
-Examples in Webbrowser:
-
-    http://localhost:3000/auth?user=adminuser&password=MyAdminPassword
-
-    http://localhost:3000/getAccountInfo?user=roman@zimbra.example.com&plain=yes
-
-    http://localhost:3000/getAccountInfo?user=roman@zimbra.example.com
-
-
-    http://localhost:3000/getAccount?user=roman@zimbra.example.com&plain=yes
-
-    http://localhost:3000/getAccount?user=roman@zimbra.example.com
-
-
-    http://localhost:3000/getAllAccounts?name=zimbra.example.com&domain=zimbra.example.com&plain=yes
-
-    http://localhost:3000/getAllAccounts?name=zimbra.example.com&domain=zimbra.example.com
-
-
 =head1 DESCRIPTION
 
 Helper class for Zimbra adminstration with a user friendly interface
 
-=cut
+=head1 SYNOPSIS
+
+    use ZimbraManager::Soap::Friendly;
+
+    my $action = 'createAccount';
+    my $args = {
+        uid => 'rplessl',
+        defaultEmailDomain => 'oetiker.ch',
+        givenName => 'Roman',
+        surName => 'Plessl',
+        country => 'CH',
+        displayName => 'Roman Plessl',
+        localeLang => 'de',
+        cosId => 'ABCD-EFGH-1234',
+    };
+    my $authToken = 'VERY_LONG_TOKEN_LINE_FROM_SESSION';
+
+    my $ret = $self->soap->callFriendly($action, $args, $authToken);
 
 =head1 ATTRIBUTES
 
@@ -53,7 +43,7 @@ my $map = {
                         account =>  {
                             by => 'name',
                             _ => $accountName}
-                    };
+            };
         },
     },
     getAccountInfo => {
@@ -63,7 +53,7 @@ my $map = {
             return {   account => {
                             by => 'name',
                             _  => $accountName}
-                    };
+            };
         },
     },
     getAccount => {
@@ -73,7 +63,7 @@ my $map = {
             return {   account => {
                             by => 'name',
                             _  => $accountName}
-                    };
+            };
         },
     },
     getAllAccounts => {
@@ -86,7 +76,7 @@ my $map = {
                         domain => {
                             by => 'name',
                             _  => $domainName }
-                    };
+            };
         },
     },
     modifyAccount => {
@@ -96,25 +86,25 @@ my $map = {
             return {    id => $zimbraUUID,
                         a => {
                             n => $modifyKey,
-                            _ => $modifyValue }
+                            _ => $modifyValue
                         }
-                    };
+            };
         },
     },
     getAllDomains => {
         args => [ ],
         out  => sub {
-            return { {} };
+            return { };
         },
     },
     getDomainInfo => {
         args => [ qw(domainName)],
         out  => sub {
-            my $domainName = shift;
+            my ($domainName) = @_;
             return {    domain => {
                             by => 'name',
                             _  => $domainName }
-                    };
+            };
         },
     },
     createAccount => {
@@ -151,7 +141,7 @@ my $map = {
                         },
                         {
                             n => 'zimbraCOSid',
-                            _ => $config->{General}->{defaultCOS},
+                            _ => $cosId,
                         },
                 ],
             };
@@ -239,21 +229,21 @@ sub callFriendly {
     if (ref $args ne 'HASH') {
         die 'parameter $args is not a HASH';
     }
-    for $key ($map->{$action}->{args}) {
-        if (not exist $args->{key}) {
-            die "function $action: mandatory key/value (key: $k) not given";
+    for my $key ($map->{$action}->{args}) {
+        if (not exist $args->{$key}) {
+            die "function $action: mandatory key/value (key: $key) not given";
         }
     }
 
     # build argument list
     my @orderedArgs;
-    for $key ($map->{$action}->{args}) {
+    for my $key ($map->{$action}->{args}) {
         push @orderedArgs, $args->{$key};
     }
     my $soapArgsBuild = $map->{$action}->{out}->(@orderedArgs);
 
     # build SOAP action name
-    my $action .= 'Request';
+    $action .= 'Request';
 
     $self->log->debug(dumper($action, $soapArgsBuild, $authToken));
 
