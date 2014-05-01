@@ -4,15 +4,15 @@ use Mojo::Base -base;
 
 =head1 NAME
 
-ZimbraManager::Soap - class to manage Zimbra with perl and SOAP
+ZimbraManager::SOAP - class to manage Zimbra with perl and SOAP
 
 =head1 SYNOPSIS
 
-    use ZimbraManager::Soap;
+    use ZimbraManager::SOAP;
 
     has 'soap' => sub {
         my $self = shift;
-        return ZimbraManager::Soap->new(
+        return ZimbraManager::SOAP->new(
             log => $self->log,
             mode => 'full' # or 'admin' or 'user'
             # soapDebug => '1', # enables SOAP backend communication debugging
