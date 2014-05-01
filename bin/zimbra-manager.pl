@@ -8,13 +8,35 @@ use lib "$FindBin::Bin/../lib";
 
 use ZimbraManager;
 
+use Getopt::Long qw(:config posix_default no_ignore_case);
+use Pod::Usage;
+
+my %opt;
+
+# Call GetOptions in BEGIN block as Mojo::Commands eats --help command line option
+BEGIN {
+    GetOptions(\%opt, 'help|h', 'man', 'logfile', 'loglevel') or exit(1);
+};
+
+use Mojolicious::Commands;
+use ZimbraManager;
+
+if($opt{help})     { pod2usage(1); exit; }
+if($opt{man})      { pod2usage(-exitstatus => 0, -verbose => 2); exit; }
+
+if (defined $opt{loglevel}) {
+    $ENV{MOJO_LOG_LEVEL} = $opt{loglevel};
+}
+if (defined $opt{logfile}) {
+    $ENV{MOJO_LOG_FILE} = $opt{logfile};
+}
+
 # disable SSL certificate checks
 use IO::Socket::SSL qw( SSL_VERIFY_NONE );
 $ENV{'PERL_LWP_SSL_VERIFY_HOSTNAME'} = 0;
 $ENV{'PERL_LWP_SSL_VERIFY_MODE'}     = SSL_VERIFY_NONE;
 
 # Start commands
-require Mojolicious::Commands;
 Mojolicious::Commands->start_app('ZimbraManager');
 
 __END__
@@ -27,18 +49,21 @@ zimbra-manager.pl - A Zimbra managing tool written in perl / soap
 
 B<zimbra-manager.pl> [I<options>...]
 
-=head1 DESCRIPTION
+
+     --man          show man-page and exit
+     --help         display mojo applicaiton help and exit
+     --logfile      Path to logfile
+     --loglevel     Mojo Loglevel (info, warn, error, debug, ...)
 
 
-Usage
------
+=head2 Usage
+
 
     $ ./bin/zimbra-manager.pl prefork
 
 or
 
     $ ./bin/zimbra-manager.pl daemon
-
 
 =head1 LICENSE
 

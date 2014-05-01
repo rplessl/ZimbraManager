@@ -48,6 +48,20 @@ has 'soap' => sub {
     );
 };
 
+=head2 log
+
+Mojo Log object
+
+=cut
+
+has log => sub {
+    my $self = shift;
+    Mojo::Log->new(
+        path  => $ENV{MOJO_LOG_FILE}  // '/dev/stderr',
+        level => $ENV{MOJO_LOG_LEVEL} // 'debug',
+    );
+};
+
 =head1 METHODS
 
 All the methods of L<Mojo::Base> plus:

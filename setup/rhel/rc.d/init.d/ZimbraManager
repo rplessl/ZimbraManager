@@ -5,8 +5,8 @@
 # Starts the ZimbraManager daemon
 #
 # chkconfig: 2345 99 35
-# description: Popruxi Server
-# processname: dovecot
+# description: ZimbraManager is a interface to Zimbra SOAP calls (like a proxy)
+# processname: zimbra-manager.pl
 # config: /etc/sysconfig/ZimbraManager
 # pidfile: /var/run/zimbra-manager.pl.pid
 
@@ -37,8 +37,9 @@ lockfile="/var/lock/subsys/ZimbraManager"
 
 ZIMBRA_MANAGER_USER=${ZIMBRA_MANAGER_USER:-zm_admin}
 ZIMBRA_MANAGER_LOGDIR=${ZIMBRA_MANAGER_LOGDIR:-/var/log/ZimbraManager}
+ZIMBRA_MANAGER_LOGLEVEL=${ZIMBRA_MANAGER_LOGLEVEL:-error}
 
-OPTIONS="--logpath=$ZIMBRA_MANAGER_LOGDIR/ZimbraManager.log --loglevel=error prefork --listen='http://*:13000' &"
+OPTIONS="prefork --pid-file=/tmp/Zimbra-Manager-prefork.pid --listen='http://*:13000' --logpath=$ZIMBRA_MANAGER_LOGDIR/ZimbraManager.log --loglevel=$ZIMBRA_MANAGER_LOGLEVEL &"
 
 start() {
     [ -x $exec ] || exit 5
