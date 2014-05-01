@@ -15,6 +15,7 @@ Helper class for Zimbra adminstration with a user friendly interface
 
     use ZimbraManager::SOAP::Friendly;
 
+    my $authToken = 'VERY_LONG_TOKEN_LINE_FROM_SESSION';
     my $action = 'createAccount';
     my $args = {
         uid                => 'rplessl',
@@ -26,9 +27,8 @@ Helper class for Zimbra adminstration with a user friendly interface
         localeLang         => 'de',
         cosId              => 'ABCD-EFGH-1234',
     };
-    my $authToken = 'VERY_LONG_TOKEN_LINE_FROM_SESSION';
 
-    my ($ret, $err) = $self->soap->callFriendly($action, $args, $authToken);
+    my ($ret, $err) = $self->soap->callFriendly($authToken, $action, $args);
 
 =head1 ATTRIBUTES
 
@@ -138,7 +138,6 @@ my $MAP = {
         },
         in  => sub {
             my $ret = shift;
-
             # $ret->{account} is a hash with
             # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
             my $a = $ret->{account}{a};
@@ -304,7 +303,7 @@ sub callFriendly {
     my $action    = shift;
     my $args      = shift;
 
-    $self->log->debug(dumper({action=>$action, args=>$args, authToken=>$authToken}));
+    $self->log->debug(dumper({authToken=>$authToken, action=>$action, args=>$args}));
 
     # check input
     if (not exists $MAP->{$action}) {
@@ -316,7 +315,7 @@ sub callFriendly {
 
     my $soapArgsBuild = {};
     if (scalar @{$MAP->{$action}{args}}) {
-        if (not defined $args or ref $args ne 'HASH') {
+        if ((not defined $args) or (ref $args ne 'HASH')) {
             die 'parameter args is not a HASH';
         }
         for my $key (@{$MAP->{$action}{args}}) {
@@ -330,24 +329,28 @@ sub callFriendly {
         my @orderedArgs;
         for my $key (@{$MAP->{$action}{args}}) {
             my $localKey = $key;
-            $localKey =~ s/\?$//; # remove optional flag
+            $localKey =~ s/\?$//; # remove optional flag but keep key
             push @orderedArgs, $args->{$localKey};
         }
+
+        # build SOAP arguments
         $soapArgsBuild = $MAP->{$action}{out}->(@orderedArgs);
     }
 
     # build SOAP action name
     my $actionRequest = $action . 'Request';
 
-    $self->log->debug(dumper({action=>$actionRequest, args=>$soapArgsBuild, authToken=>$authToken}));
+    $self->log->debug(dumper({authToken=>$authToken, action=>$actionRequest, args=>$soapArgsBuild}));
 
-    my ($ret, $err)  =  $self->call($actionRequest, $soapArgsBuild, $authToken);
+    my ($ret, $err) = $self->call($actionRequest, $soapArgsBuild, $authToken);
+
+    # parse SOAP answer
     my $parsedAnswer = $MAP->{$action}{in}->($ret);
+
     return ($parsedAnswer, $err);
 }
 
-
-
+1;
 __END__
 
 =head1 LICENSE
