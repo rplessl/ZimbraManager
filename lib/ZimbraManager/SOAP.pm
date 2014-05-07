@@ -135,7 +135,7 @@ parsed WSDL as XML
 
 =cut
 
-has 'wsdlXml' => sub { 
+has 'wsdlXml' => sub {
     my $self = shift;
     my $wsdlXml = XML::LibXML->new->parse_file($self->wsdlFile);
     return $wsdlXml;
@@ -149,7 +149,7 @@ and function stubs.
 =cut
 
 has 'wsdl' => sub {
-    my $self = shift; 
+    my $self = shift;
     my $wsdlXml = $self->wsdlXml;
     my $wsdl = XML::Compile::WSDL11->new($wsdlXml);
     for my $xsd (glob $self->wsdlPath."*.xsd") {
@@ -225,7 +225,7 @@ has 'service' => sub {
     my $wsdlServices = $wsdlXml->getElementsByTagName( 'wsdl:service' );
     for my $service (@$wsdlServices) {
         my $name         = $service->getAttribute( 'name' );
-        my $port         = $service->getElementsByTagName( 'wsdl:port' )->[0];    
+        my $port         = $service->getElementsByTagName( 'wsdl:port' )->[0];
         my $port_name    = $port->getAttribute( 'name' );
         my $address      = $port->getElementsByTagName( 'soap:address' )->[0];
         my $uri          = $address->getAttribute( 'location' );
@@ -331,13 +331,28 @@ Calls Zimbra with the given argument and returns the SOAP response as perl hash.
 
 =cut
 
-sub call {
+sub callLegacy {
     my $self      = shift;
     my $action    = shift;
     my $args      = shift;
     my $authToken = shift;
+    my $namedParameters = {
+        action    => $action,
+        args      => $args,
+        authToken => $authToken,
+    };
+    return $self->call($namedParameters);
+}
 
-    $self->log->debug(dumper($action, $args, $authToken));
+sub call {
+    my $self            = shift;
+    my $namedParameters = shift;
+    warn dumper $namedParameters;
+    my $action          = $namedParameters->{action};
+    my $args            = $namedParameters->{args};
+    my $authToken       = $namedParameters->{authToken};
+
+    $self->log->debug(dumper({action=>$action, args=>$args, authToken=>$authToken}));
 
     my $uri = $self->service->{uri};
 

@@ -100,7 +100,7 @@ my $MAP = {
             my $ret = shift;
             # $ret->{account} is a hash with
             # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
-            my $a   = $ret->{account}{a};
+            my $a = $ret->{account}->{a};
             my $parsed = {};
             for my $elem (@$a) {
                 $parsed->{$elem->{n}} = $elem->{'_'};
@@ -169,7 +169,15 @@ my $MAP = {
         },
         in  => sub {
             my $ret = shift;
-            return $ret;
+            my $domain = $ret->{domain};
+            if ($domain->{id} eq 'globalconfig-dummy-id') {
+                return {
+                    id => undef
+                };
+            }
+            else {
+                return $domain;
+            }
         },
     },
     createAccount => {
@@ -221,7 +229,7 @@ my $MAP = {
         out  => sub {
             my ($zimbraUUID, $emailAlias) = @_;
             return {
-                id => $zimbraUUID,
+                id    => $zimbraUUID,
                 alias => $emailAlias
             };
         },
@@ -235,7 +243,7 @@ my $MAP = {
         out  => sub {
             my ($zimbraUUID, $emailAlias) = @_;
             return {
-                id => $zimbraUUID,
+                id    => $zimbraUUID,
                 alias => $emailAlias
             };
         },
@@ -256,6 +264,22 @@ my $MAP = {
             my $ret = shift;
             return $ret;
         },
+    },
+    getCos => {
+        args => [ qw(cosName) ],
+        out  => sub {
+            my ($cosName) = @_;
+            return {    cos => {
+                            by => 'name',
+                            _  => $cosName }
+            };
+        },
+        in  => sub {
+            my $ret = shift;
+            # $ret->{cos} is a hash with
+            # 'id' (UUID), 'name' (email)
+            return $ret->{cos};
+        }
     },
 };
 
@@ -297,13 +321,27 @@ Calls Zimbra with the given argument and returns the SOAP response as perl hash.
 
 =cut
 
-sub callFriendly {
+sub callFriendlyLegacy {
     my $self      = shift;
     my $authToken = shift;
     my $action    = shift;
     my $args      = shift;
+    my $namedParameters = {
+        action    => $action,
+        args      => $args,
+        authToken => $authToken,
+    };
+    return $self->callFriendly($namedParameters);
+}
 
-    $self->log->debug(dumper({authToken=>$authToken, action=>$action, args=>$args}));
+sub callFriendly {
+    my $self       = shift;
+    my $parameters = shift;
+    my $action     = $parameters->{action};
+    my $args       = $parameters->{args};
+    my $authToken  = $parameters->{authToken};
+
+    $self->log->debug(dumper({action=>$action, args=>$args, authToken=>$authToken}));
 
     # check input
     if (not exists $MAP->{$action}) {
