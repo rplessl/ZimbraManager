@@ -27,8 +27,12 @@ Helper class for Zimbra adminstration with a user friendly interface
         localeLang         => 'de',
         cosId              => 'ABCD-EFGH-1234',
     };
-
-    my ($ret, $err) = $self->soap->callFriendly($authToken, $action, $args);
+    my $namedParameters = {
+        action    => $action,
+        args      => $args,
+        authToken => $authToken,
+    };
+    my ($ret, $err) = $self->soap->callFriendly($namedParameters);
 
 =head1 ATTRIBUTES
 
@@ -221,7 +225,14 @@ my $MAP = {
         },
         in  => sub {
             my $ret = shift;
-            return $ret;
+            # $ret->{account} is a hash with
+            # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
+            my $a = $ret->{account}{a};
+            my $parsed = {};
+            for my $elem (@$a) {
+                $parsed->{$elem->{n}} = $elem->{'_'};
+            }
+            return $parsed;
         },
     },
     addAccountAlias => {
@@ -335,13 +346,11 @@ sub callFriendlyLegacy {
 }
 
 sub callFriendly {
-    my $self       = shift;
-    my $parameters = shift;
-    my $action     = $parameters->{action};
-    my $args       = $parameters->{args};
-    my $authToken  = $parameters->{authToken};
-
-    $self->log->debug(dumper({action=>$action, args=>$args, authToken=>$authToken}));
+    my $self            = shift;
+    my $namedParameters = shift;
+    my $action          = $namedParameters->{action};
+    my $args            = $namedParameters->{args};
+    my $authToken       = $namedParameters->{authToken};
 
     # check input
     if (not exists $MAP->{$action}) {
@@ -356,7 +365,7 @@ sub callFriendly {
         if ((not defined $args) or (ref $args ne 'HASH')) {
             die 'parameter args is not a HASH';
         }
-        for my $key (@{$MAP->{$action}{args}}) {
+        for my $key (@{$MAP->{$action}->{args}}) {
             next if $key =~ m/\?$/; # optional argument
             if (not exists $args->{$key}) {
                 die "function $action: mandatory key/value (key: $key) not given";
@@ -365,26 +374,34 @@ sub callFriendly {
 
         # build argument list
         my @orderedArgs;
-        for my $key (@{$MAP->{$action}{args}}) {
+        for my $key (@{$MAP->{$action}->{args}}) {
             my $localKey = $key;
             $localKey =~ s/\?$//; # remove optional flag but keep key
             push @orderedArgs, $args->{$localKey};
         }
 
         # build SOAP arguments
-        $soapArgsBuild = $MAP->{$action}{out}->(@orderedArgs);
+        $soapArgsBuild = $MAP->{$action}->{out}->(@orderedArgs);
     }
 
     # build SOAP action name
     my $actionRequest = $action . 'Request';
 
-    $self->log->debug(dumper({authToken=>$authToken, action=>$actionRequest, args=>$soapArgsBuild}));
+    $self->log->debug(dumper({
+        _function => 'ZimbraManager::Soap::callFriendly',
+        action    =>$action,
+        args      =>$args,
+        authToken =>$authToken
+    }));
 
-    my ($ret, $err) = $self->call($actionRequest, $soapArgsBuild, $authToken);
+    my ($ret, $err) = $self->call({
+        action    =>$actionRequest,
+        args      =>$soapArgsBuild,
+        authToken =>$authToken,
+    });
 
     # parse SOAP answer
-    my $parsedAnswer = $MAP->{$action}{in}->($ret);
-
+    my $parsedAnswer = $MAP->{$action}->{in}->($ret);
     return ($parsedAnswer, $err);
 }
 

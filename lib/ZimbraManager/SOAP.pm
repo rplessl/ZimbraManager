@@ -21,7 +21,12 @@ ZimbraManager::SOAP - class to manage Zimbra with perl and SOAP
         );
     };
 
-    my $ret = $self->soap->call(FUNCTION, %PARAMS, $AUTHTOKEN));
+    my $namedParameters = {
+        action    => 'FUNCTIONNAME',
+        args      => \%DATASTRUCTUREDPARAMS,
+        authToken => $authToken,
+    };
+    my ($ret, $err) = $self->soap->call($namedParameters);
 
 =head1 DESCRIPTION
 
@@ -347,12 +352,9 @@ sub callLegacy {
 sub call {
     my $self            = shift;
     my $namedParameters = shift;
-    warn dumper $namedParameters;
     my $action          = $namedParameters->{action};
     my $args            = $namedParameters->{args};
     my $authToken       = $namedParameters->{authToken};
-
-    $self->log->debug(dumper({action=>$action, args=>$args, authToken=>$authToken}));
 
     my $uri = $self->service->{uri};
 
@@ -365,9 +367,12 @@ sub call {
     my $ua = $self->transporter->userAgent();
        $ua->cookie_jar($cookieJar);
 
-    $self->log->debug( dumper { _function => 'ZimbraManager::Soap::call',
-                                action => $action,
-                                args => $args });
+    $self->log->debug(dumper({
+        _function => 'ZimbraManager::Soap::call',
+        action    =>$action,
+        args      =>$args,
+        authToken =>$authToken
+    }));
 
     my ( $response, $trace ) = $self->soapOps->{$action}->($args);
     if ($self->soapDebug) {

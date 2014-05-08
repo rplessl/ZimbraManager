@@ -126,7 +126,12 @@ my $handleZimbraAuth = sub {
         $ret = 'true';
     }
     else {
-        ($ret, $err) = $self->soap->call( $buildAuthRequest->($user,$password), undef );
+        my ($action, $args) = $buildAuthRequest->($user,$password);
+        ($ret, $err) = $self->soap->call({
+            action    => $action,
+            args      => $args,
+            authToken => undef,
+        });
         if (!$err) {
            my $token = $ret->{authToken};
            $ctrl->session('ZM_ADMIN_AUTH_TOKEN' => $token);
@@ -173,9 +178,9 @@ sub startup {
     });
 
     # Friendly calls to ZimbraManager with key / value parmeters
-    $r->post('/friendly/:action' => sub {
+    $r->post('/friendly/:call' => sub {
         my $ctrl        = shift;
-        my $action      = $ctrl->param('action');
+        my $action      = $ctrl->param('call');
         my $plain       = $ctrl->param('plain');
         my $perl_args   = decode_json($ctrl->req->body);
         my ($ret, $err) = $self->soap->callFriendly({
@@ -185,9 +190,9 @@ sub startup {
         });
         $renderOutput->($self, $ctrl, $ret, $err, $plain);
     });
-    $r->get('/friendly/:action' => sub {
+    $r->get('/friendly/:call' => sub {
         my $ctrl        = shift;
-        my $action      = $ctrl->param('action');
+        my $action      = $ctrl->param('call');
         my $plain       = $ctrl->param('plain');
         my @param_names = $ctrl->param;
         my $params;
@@ -203,9 +208,9 @@ sub startup {
     });
 
     # Handle direct SOAP calls with Zimbra SOAP Datastructure
-    $r->post('/:action' => sub {
+    $r->post('/:call' => sub {
         my $ctrl        = shift;
-        my $action      = $ctrl->param('action');
+        my $action      = $ctrl->param('call');
         my $plain       = $ctrl->param('plain');
         my $perl_args   = decode_json($ctrl->req->body);
         my ($ret, $err) = $self->soap->call({
