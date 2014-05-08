@@ -13,22 +13,17 @@ ZimbraManager - A Mojolicious application to manage Zimbra with SOAP
     # Start commands
     Mojolicious::Commands->start_app('ZimbraManager');
 
-=head1 USAGE
-
-Examples in Webbrowser:
-
-    http://localhost:3000/auth?user=adminuser&password=MyAdminPassword
-
 =cut
 
 use Mojo::Util qw(dumper);
 use Mojo::JSON qw(decode_json encode_json);
 
 use ZimbraManager::SOAP;
+use ZimbraManager::SOAP::Friendly;
 
 use HTTP::CookieJar::LWP;
 
-our $VERSION = "1.0.1";
+our $VERSION = "1.5";
 
 =head1 ATTRIBUTES
 
@@ -40,11 +35,25 @@ The ZimbraManager SOAP object
 
 has 'soap' => sub {
     my $self = shift;
-    return ZimbraManager::SOAP->new(
+    return ZimbraManager::SOAP::Friendly->new(
         log => $self->log,
         mode => 'full',
         # soapDebug => '1',           # enables SOAP backend communication debugging
         # soapErrorsToConsumer => '1' # returns SOAP error to consumer
+    );
+};
+
+=head2 log
+
+Mojo Log object
+
+=cut
+
+has log => sub {
+    my $self = shift;
+    Mojo::Log->new(
+        path  => $ENV{MOJO_LOG_FILE}  // '/dev/stderr',
+        level => $ENV{MOJO_LOG_LEVEL} // 'debug',
     );
 };
 
@@ -117,7 +126,12 @@ my $handleZimbraAuth = sub {
         $ret = 'true';
     }
     else {
-        ($ret, $err) = $self->soap->call( $buildAuthRequest->($user,$password), undef );
+        my ($action, $args) = $buildAuthRequest->($user,$password);
+        ($ret, $err) = $self->soap->call({
+            action    => $action,
+            args      => $args,
+            authToken => undef,
+        });
         if (!$err) {
            my $token = $ret->{authToken};
            $ctrl->session('ZM_ADMIN_AUTH_TOKEN' => $token);
@@ -154,7 +168,6 @@ sub startup {
         my ($ret, $err) = $handleZimbraAuth->($self, $ctrl, $user, $password);
         $renderOutput->($self, $ctrl, $ret, $err, $plain);
     });
-
     $r->get('/auth' => sub {
         my $ctrl        = shift;
         my $user        = $ctrl->param('user');
@@ -164,34 +177,52 @@ sub startup {
         $renderOutput->($self, $ctrl, $ret, $err, $plain);
     });
 
-    # Normal routing is done with POST requests
-    $r->post('/:call' => sub {
+    # Friendly calls to ZimbraManager with key / value parmeters
+    $r->post('/friendly/:call' => sub {
         my $ctrl        = shift;
-        my $call        = $ctrl->param('call');
+        my $action      = $ctrl->param('call');
         my $plain       = $ctrl->param('plain');
         my $perl_args   = decode_json($ctrl->req->body);
-        my ($ret, $err) = $self->soap->call($call, $perl_args, $ctrl->session('ZM_ADMIN_AUTH_TOKEN'));
+        my ($ret, $err) = $self->soap->callFriendly({
+            action    => $action,
+            args      => $perl_args,
+            authToken => $ctrl->session('ZM_ADMIN_AUTH_TOKEN'),
+        });
         $renderOutput->($self, $ctrl, $ret, $err, $plain);
     });
-
-    # But is also possible with special GET requests
-    $r->get('/:call' => sub {
+    $r->get('/friendly/:call' => sub {
         my $ctrl        = shift;
-        my $call        = $ctrl->param('call');
+        my $action      = $ctrl->param('call');
         my $plain       = $ctrl->param('plain');
         my @param_names = $ctrl->param;
         my $params;
         for my $p (@param_names) {
-            $params->{$p} = $ctrl->param($p) unless (($p eq 'call') or ($p eq 'plain'));
+            $params->{$p} = $ctrl->param($p) unless (($p eq 'action') or ($p eq 'plain'));
         }
-        my ($ret, $err) = $self->soap->call($call, $params, $ctrl->session('ZM_ADMIN_AUTH_TOKEN'));
+        my ($ret, $err) = $self->soap->callFriendly({
+            action    => $action,
+            args      => $params,
+            authToken => $ctrl->session('ZM_ADMIN_AUTH_TOKEN'),
+        });
+        $renderOutput->($self, $ctrl, $ret, $err, $plain);
+    });
+
+    # Handle direct SOAP calls with Zimbra SOAP Datastructure
+    $r->post('/:call' => sub {
+        my $ctrl        = shift;
+        my $action      = $ctrl->param('call');
+        my $plain       = $ctrl->param('plain');
+        my $perl_args   = decode_json($ctrl->req->body);
+        my ($ret, $err) = $self->soap->call({
+            action     => $action,
+            args       => $perl_args,
+            authToken  => $ctrl->session('ZM_ADMIN_AUTH_TOKEN')
+        });
         $renderOutput->($self, $ctrl, $ret, $err, $plain);
     });
 
     return 0;
 }
-
-
 
 1;
 
@@ -224,5 +255,6 @@ S<Roman Plessl E<lt>roman.plessl@oetiker.chE<gt>>
 
  2014-03-20 rp Initial Version
  2014-04-29 rp New API and added handling of sessions
+ 2014-05-07 rp Added new API with named parameters
 
 =cut

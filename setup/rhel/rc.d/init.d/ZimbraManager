@@ -4,8 +4,8 @@
 #
 # Starts the ZimbraManager daemon
 #
-# chkconfig: 2345 90 35
-# description: ZimbraManager Server
+# chkconfig: 2345 99 35
+# description: ZimbraManager is a interface to Zimbra SOAP calls (like a proxy)
 # processname: zimbra-manager.pl
 # config: /etc/sysconfig/ZimbraManager
 # pidfile: /var/run/zimbra-manager.pl.pid
@@ -29,7 +29,7 @@ if [ -f /etc/sysconfig/ZimbraManager ]; then
 fi
 
 RETVAL=0
-prog=propruxi
+prog='Zimbra Manager'
 executable="/opt/oss/ZimbraManager/bin/zimbra-manager.pl"
 pidfile="/var/run/zimbra-manager.pl.pid"
 pid=`test -f $pidfile && cat $pidfile`
@@ -39,7 +39,7 @@ ZIMBRA_MANAGER_USER=${ZIMBRA_MANAGER_USER:-zm_admin}
 ZIMBRA_MANAGER_LOGDIR=${ZIMBRA_MANAGER_LOGDIR:-/var/log/ZimbraManager}
 ZIMBRA_MANAGER_LOGLEVEL=${ZIMBRA_MANAGER_LOGLEVEL:-error}
 
-OPTIONS="--logpath=$ZIMBRA_MANAGER_LOGDIR/ZimbraManager.log --loglevel=$ZIMBRA_MANAGER_LOGLEVEL prefork --pid-file=/tmp/zimbra-manager-prefork.pid --listen='http://*:13000' &"
+OPTIONS="--logfile=$ZIMBRA_MANAGER_LOGDIR/ZimbraManager.log --loglevel=$ZIMBRA_MANAGER_LOGLEVEL prefork --pid-file=/tmp/Zimbra-Manager-prefork.pid --listen='http://*:13000' &"
 
 start() {
     [ -x $exec ] || exit 5

@@ -4,15 +4,15 @@ use Mojo::Base -base;
 
 =head1 NAME
 
-ZimbraManager::Soap - class to manage Zimbra with perl and SOAP
+ZimbraManager::SOAP - class to manage Zimbra with perl and SOAP
 
 =head1 SYNOPSIS
 
-    use ZimbraManager::Soap;
+    use ZimbraManager::SOAP;
 
     has 'soap' => sub {
         my $self = shift;
-        return ZimbraManager::Soap->new(
+        return ZimbraManager::SOAP->new(
             log => $self->log,
             mode => 'full' # or 'admin' or 'user'
             # soapDebug => '1', # enables SOAP backend communication debugging
@@ -21,7 +21,21 @@ ZimbraManager::Soap - class to manage Zimbra with perl and SOAP
         );
     };
 
-    my $ret = $self->soap->call(FUNCTION, %PARAMS, $AUTHTOKEN));
+    my $namedParameters = {
+        action    => 'FUNCTIONNAME',
+        args      => \%DATASTRUCTUREDPARAMS,
+        authToken => $authToken,
+    };
+    my ($ret, $err) = $self->soap->call($namedParameters);
+
+also
+    $self->soap->call(
+        action    => 'FUNCTIONNAME',
+        args      => \%DATASTRUCTUREDPARAMS,
+        authToken => $authToken,
+    );
+
+is valid
 
 =head1 DESCRIPTION
 
@@ -135,7 +149,7 @@ parsed WSDL as XML
 
 =cut
 
-has 'wsdlXml' => sub { 
+has 'wsdlXml' => sub {
     my $self = shift;
     my $wsdlXml = XML::LibXML->new->parse_file($self->wsdlFile);
     return $wsdlXml;
@@ -149,7 +163,7 @@ and function stubs.
 =cut
 
 has 'wsdl' => sub {
-    my $self = shift; 
+    my $self = shift;
     my $wsdlXml = $self->wsdlXml;
     my $wsdl = XML::Compile::WSDL11->new($wsdlXml);
     for my $xsd (glob $self->wsdlPath."*.xsd") {
@@ -225,7 +239,7 @@ has 'service' => sub {
     my $wsdlServices = $wsdlXml->getElementsByTagName( 'wsdl:service' );
     for my $service (@$wsdlServices) {
         my $name         = $service->getAttribute( 'name' );
-        my $port         = $service->getElementsByTagName( 'wsdl:port' )->[0];    
+        my $port         = $service->getElementsByTagName( 'wsdl:port' )->[0];
         my $port_name    = $port->getAttribute( 'name' );
         my $address      = $port->getElementsByTagName( 'soap:address' )->[0];
         my $uri          = $address->getAttribute( 'location' );
@@ -331,13 +345,28 @@ Calls Zimbra with the given argument and returns the SOAP response as perl hash.
 
 =cut
 
-sub call {
+sub callLegacy {
     my $self      = shift;
     my $action    = shift;
     my $args      = shift;
     my $authToken = shift;
+    my $namedParameters = {
+        action    => $action,
+        args      => $args,
+        authToken => $authToken,
+    };
+    return $self->call($namedParameters);
+}
 
-    $self->log->debug(dumper($action, $args, $authToken));
+sub call {
+    my $self            = shift;
+    my $namedParameters = shift;
+    if (ref $namedParmeters ne 'HASH') {
+        $namedParameters = { @_ };
+    }
+    my $action          = $namedParameters->{action};
+    my $args            = $namedParameters->{args};
+    my $authToken       = $namedParameters->{authToken};
 
     my $uri = $self->service->{uri};
 
@@ -350,9 +379,12 @@ sub call {
     my $ua = $self->transporter->userAgent();
        $ua->cookie_jar($cookieJar);
 
-    $self->log->debug( dumper { _function => 'ZimbraManager::Soap::call',
-                                action => $action,
-                                args => $args });
+    $self->log->debug(dumper({
+        _function => 'ZimbraManager::Soap::call',
+        action    =>$action,
+        args      =>$args,
+        authToken =>$authToken
+    }));
 
     my ( $response, $trace ) = $self->soapOps->{$action}->($args);
     if ($self->soapDebug) {

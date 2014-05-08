@@ -1,10 +1,11 @@
 package ZimbraManager::SOAP::Friendly;
 
 use Mojo::Base 'ZimbraManager::SOAP';
+use Mojo::Util qw(dumper);
 
 =head1 NAME
 
-ZimbraManager::Soap::Friendly - class to manage Zimbra with perl and SOAP
+ZimbraManager::SOAP::Friendly - class to manage Zimbra with perl and SOAP
 
 =head1 DESCRIPTION
 
@@ -12,28 +13,48 @@ Helper class for Zimbra adminstration with a user friendly interface
 
 =head1 SYNOPSIS
 
-    use ZimbraManager::Soap::Friendly;
+    use ZimbraManager::SOAP::Friendly;
 
+    my $authToken = 'VERY_LONG_TOKEN_LINE_FROM_SESSION';
     my $action = 'createAccount';
     my $args = {
-        uid => 'rplessl',
+        uid                => 'rplessl',
         defaultEmailDomain => 'oetiker.ch',
-        givenName => 'Roman',
-        surName => 'Plessl',
-        country => 'CH',
-        displayName => 'Roman Plessl',
-        localeLang => 'de',
-        cosId => 'ABCD-EFGH-1234',
+        givenName          => 'Roman',
+        surName            => 'Plessl',
+        country            => 'CH',
+        displayName        => 'Roman Plessl',
+        localeLang         => 'de',
+        cosId              => 'ABCD-EFGH-1234',
     };
-    my $authToken = 'VERY_LONG_TOKEN_LINE_FROM_SESSION';
+    my $namedParameters = {
+        action    => $action,
+        args      => $args,
+        authToken => $authToken,
+    };
+    my ($ret, $err) = $self->soap->callFriendly($namedParameters);
 
-    my $ret = $self->soap->callFriendly($action, $args, $authToken);
+also
+
+    $self->soap->callFriendly(
+        authToken => $authToken,
+        action    => $action,
+        args      => { },
+    );
+
+is valid
 
 =head1 ATTRIBUTES
 
+=head2 $MAP
+
+This hash defines arguments and out-going (to Zimbra) and in-coming
+(from Zimbra) mapping subroutines for SOAP actions called with the
+callFriendly() method below.
+
 =cut
 
-my $map = {
+my $MAP = {
     auth => {
         args => [ qw(password accountName)],
         out  => sub {
@@ -45,6 +66,10 @@ my $map = {
                             _ => $accountName}
             };
         },
+        in  => sub {
+            my $ret = shift;
+            return $ret;
+        },
     },
     getAccountInfo => {
         args => [ qw(accountName)],
@@ -55,15 +80,46 @@ my $map = {
                             _  => $accountName}
             };
         },
+        in  => sub {
+            my $ret = shift;
+            my $a   = $ret->{a};
+            my $parsed = {};
+            for my $elem (@$a) {
+                $parsed->{$elem->{n}} = $elem->{'_'};
+            }
+            return $parsed;
+        },
     },
     getAccount => {
-        args => [ qw(accountName)],
+        args => [ qw(accountName attribute?) ],
         out  => sub {
-            my ($accountName) = @_;
-            return {   account => {
-                            by => 'name',
-                            _  => $accountName}
-            };
+            my ($accountName, $attribute) = @_;
+            my $argHash;
+            if (defined $attribute) { # optional; get just this element
+                $argHash = { account => {
+                                         by => 'name',
+                                         _  => $accountName},
+                             attrs   => $attribute,
+                           };
+            }
+            else {
+                $argHash = { account => {
+                                         by => 'name',
+                                         _  => $accountName}
+                           };
+            }
+            return $argHash;
+        },
+        in  => sub {
+            my $ret = shift;
+            # $ret->{account} is a hash with
+            # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
+            my $a = $ret->{account}->{a};
+            my $parsed = {};
+            for my $elem (@$a) {
+                $parsed->{$elem->{n}} = $elem->{'_'};
+            }
+            return $parsed;
         },
     },
     getAllAccounts => {
@@ -78,6 +134,10 @@ my $map = {
                             _  => $domainName }
             };
         },
+        in  => sub {
+            my $ret = shift;
+            return $ret;
+        },
     },
     modifyAccount => {
         args => [ qw(zimbraUUID modifyKey modifyValue)],
@@ -90,11 +150,26 @@ my $map = {
                         }
             };
         },
+        in  => sub {
+            my $ret = shift;
+            # $ret->{account} is a hash with
+            # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
+            my $a = $ret->{account}{a};
+            my $parsed = {};
+            for my $elem (@$a) {
+                $parsed->{$elem->{n}} = $elem->{'_'};
+            }
+            return $parsed;
+        },
     },
     getAllDomains => {
         args => [ ],
         out  => sub {
-            return { };
+            return {};
+        },
+        in  => sub {
+            my $ret = shift;
+            return $ret;
         },
     },
     getDomainInfo => {
@@ -105,6 +180,18 @@ my $map = {
                             by => 'name',
                             _  => $domainName }
             };
+        },
+        in  => sub {
+            my $ret = shift;
+            my $domain = $ret->{domain};
+            if ($domain->{id} eq 'globalconfig-dummy-id') {
+                return {
+                    id => undef
+                };
+            }
+            else {
+                return $domain;
+            }
         },
     },
     createAccount => {
@@ -146,15 +233,30 @@ my $map = {
                 ],
             };
         },
+        in  => sub {
+            my $ret = shift;
+            # $ret->{account} is a hash with
+            # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
+            my $a = $ret->{account}{a};
+            my $parsed = {};
+            for my $elem (@$a) {
+                $parsed->{$elem->{n}} = $elem->{'_'};
+            }
+            return $parsed;
+        },
     },
     addAccountAlias => {
         args => [ qw(zimbraUUID emailAlias) ],
         out  => sub {
             my ($zimbraUUID, $emailAlias) = @_;
             return {
-                id => $zimbraUUID,
+                id    => $zimbraUUID,
                 alias => $emailAlias
             };
+        },
+        in  => sub {
+            my $ret = shift;
+            return $ret;
         },
     },
     removeAccountAlias => {
@@ -162,9 +264,13 @@ my $map = {
         out  => sub {
             my ($zimbraUUID, $emailAlias) = @_;
             return {
-                id => $zimbraUUID,
+                id    => $zimbraUUID,
                 alias => $emailAlias
             };
+        },
+        in  => sub {
+            my $ret = shift;
+            return $ret;
         },
     },
     deleteAccount => {
@@ -175,6 +281,26 @@ my $map = {
                 id => $zimbraUUID
             };
         },
+        in  => sub {
+            my $ret = shift;
+            return $ret;
+        },
+    },
+    getCos => {
+        args => [ qw(cosName) ],
+        out  => sub {
+            my ($cosName) = @_;
+            return {    cos => {
+                            by => 'name',
+                            _  => $cosName }
+            };
+        },
+        in  => sub {
+            my $ret = shift;
+            # $ret->{cos} is a hash with
+            # 'id' (UUID), 'name' (email)
+            return $ret->{cos};
+        }
     },
 };
 
@@ -182,7 +308,7 @@ my $map = {
 
 All the methods of L<Mojo::Base> plus:
 
-=head2 private functions
+=head2 Private functions
 
 Private functions used in the startup function
 
@@ -208,52 +334,91 @@ my $helperHashingAllAccounts = sub {
     return $accounts;
 };
 
-=head2 callFriendly
+=head2 Public methods
+
+=head3 callFriendly
 
 Calls Zimbra with the given argument and returns the SOAP response as perl hash.
 
 =cut
 
-sub callFriendly {    
+sub callFriendlyLegacy {
     my $self      = shift;
+    my $authToken = shift;
     my $action    = shift;
     my $args      = shift;
-    my $authToken = shift;
-
-    $self->log->debug(dumper($action, $args, $authToken));
-
-    # check input
-    if (not exists $map->{$action}) {
-        die "no valid function ($action) given";
-    }
-    if (ref $args ne 'HASH') {
-        die 'parameter $args is not a HASH';
-    }
-    for my $key ($map->{$action}->{args}) {
-        if (not exist $args->{$key}) {
-            die "function $action: mandatory key/value (key: $key) not given";
-        }
-    }
-
-    # build argument list
-    my @orderedArgs;
-    for my $key ($map->{$action}->{args}) {
-        push @orderedArgs, $args->{$key};
-    }
-    my $soapArgsBuild = $map->{$action}->{out}->(@orderedArgs);
-
-    # build SOAP action name
-    $action .= 'Request';
-
-    $self->log->debug(dumper($action, $soapArgsBuild, $authToken));
-
-    return {
-        $self->soap->call($action, $soapArgsBuild, $authToken)
+    my $namedParameters = {
+        action    => $action,
+        args      => $args,
+        authToken => $authToken,
     };
+    return $self->callFriendly($namedParameters);
 }
 
+sub callFriendly {
+    my $self            = shift;
+    my $namedParameters = shift;
+    if (ref $namedParmeters ne 'HASH') {
+        $namedParameters = { @_ };
+    }
+    my $action          = $namedParameters->{action};
+    my $args            = $namedParameters->{args};
+    my $authToken       = $namedParameters->{authToken};
 
+    # check input
+    if (not exists $MAP->{$action}) {
+        die "no valid function ($action) given";
+    }
+    if ($action ne 'auth' and not defined $authToken) {
+        die 'parameter authToken missing';
+    }
 
+    my $soapArgsBuild = {};
+    if (scalar @{$MAP->{$action}{args}}) {
+        if ((not defined $args) or (ref $args ne 'HASH')) {
+            die 'parameter args is not a HASH';
+        }
+        for my $key (@{$MAP->{$action}->{args}}) {
+            next if $key =~ m/\?$/; # optional argument
+            if (not exists $args->{$key}) {
+                die "function $action: mandatory key/value (key: $key) not given";
+            }
+        }
+
+        # build argument list
+        my @orderedArgs;
+        for my $key (@{$MAP->{$action}->{args}}) {
+            my $localKey = $key;
+            $localKey =~ s/\?$//; # remove optional flag but keep key
+            push @orderedArgs, $args->{$localKey};
+        }
+
+        # build SOAP arguments
+        $soapArgsBuild = $MAP->{$action}->{out}->(@orderedArgs);
+    }
+
+    # build SOAP action name
+    my $actionRequest = $action . 'Request';
+
+    $self->log->debug(dumper({
+        _function => 'ZimbraManager::Soap::callFriendly',
+        action    =>$action,
+        args      =>$args,
+        authToken =>$authToken
+    }));
+
+    my ($ret, $err) = $self->call({
+        action    =>$actionRequest,
+        args      =>$soapArgsBuild,
+        authToken =>$authToken,
+    });
+
+    # parse SOAP answer
+    my $parsedAnswer = $MAP->{$action}->{in}->($ret);
+    return ($parsedAnswer, $err);
+}
+
+1;
 __END__
 
 =head1 LICENSE

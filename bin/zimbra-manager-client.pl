@@ -1,16 +1,14 @@
 #!/usr/bin/env perl
-
-use 5.010;
-use strict;
+use strict;  
 use warnings;
 
-no if $] >= 5.017011, warnings => 'experimental::smartmatch';
+use 5.010;
 
 use FindBin;
 use lib "$FindBin::Bin/../thirdparty/lib/perl5";
 
-use Getopt::Long 2.25 qw(:config posix_default no_ignore_case);
-use Pod::Usage 1.14;
+use Getopt::Long qw(:config posix_default no_ignore_case);
+use Pod::Usage;
 
 use Mojo::UserAgent;
 use Mojo::URL;
@@ -25,8 +23,6 @@ my $ua;       # Mojo User Agent
 my $defaultEmailDomain = 'example.com';
 my $defaultCOS         = 'example.com';
 my $defaultCOSId;
-
-our $VERSION = '0.1';
 
 # main loop
 sub main {
