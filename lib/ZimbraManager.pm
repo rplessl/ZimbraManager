@@ -23,7 +23,7 @@ use ZimbraManager::SOAP::Friendly;
 
 use HTTP::CookieJar::LWP;
 
-our $VERSION = "1.3.0";
+our $VERSION = "1.4.0";
 
 =head1 ATTRIBUTES
 
