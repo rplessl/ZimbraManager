@@ -14,6 +14,33 @@ This ZimbraManager is a Mojo Web Service which keeps a session for user
 management open and allows to set run SOAP requests based on user REST
 requests as input.
 
+Usage
+-----
+
+# ZimbraManager::SOAP::Friendly;
+
+    use ZimbraManager::SOAP::Friendly;
+
+    my $authToken = 'VERY_LONG_TOKEN_LINE_FROM_SESSION';
+    my $action = 'createAccount';
+    my $args = {
+        uid                => 'rplessl',
+        defaultEmailDomain => 'oetiker.ch',
+        givenName          => 'Roman',
+        surName            => 'Plessl',
+        country            => 'CH',
+        displayName        => 'Roman Plessl',
+        localeLang         => 'de',
+        cosId              => 'ABCD-EFGH-1234',
+    };
+    my $namedParameters = {
+        action    => $action,
+        args      => $args,
+        authToken => $authToken,
+    };
+    my ($ret, $err) = $self->soap->callFriendly($namedParameters);
+
+
 Installation
 ------------
 Build infrastructure to run the framework

@@ -28,6 +28,15 @@ ZimbraManager::SOAP - class to manage Zimbra with perl and SOAP
     };
     my ($ret, $err) = $self->soap->call($namedParameters);
 
+also
+    $self->soap->call(
+        action    => 'FUNCTIONNAME',
+        args      => \%DATASTRUCTUREDPARAMS,
+        authToken => $authToken,
+    );
+
+is valid
+
 =head1 DESCRIPTION
 
 Helper class for Zimbra adminstration interface.
@@ -352,6 +361,9 @@ sub callLegacy {
 sub call {
     my $self            = shift;
     my $namedParameters = shift;
+    if (ref $namedParmeters ne 'HASH') {
+        $namedParameters = { @_ };
+    }
     my $action          = $namedParameters->{action};
     my $args            = $namedParameters->{args};
     my $authToken       = $namedParameters->{authToken};

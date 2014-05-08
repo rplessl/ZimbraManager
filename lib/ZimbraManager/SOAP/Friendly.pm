@@ -34,6 +34,16 @@ Helper class for Zimbra adminstration with a user friendly interface
     };
     my ($ret, $err) = $self->soap->callFriendly($namedParameters);
 
+also
+
+    $self->soap->callFriendly(
+        authToken => $authToken,
+        action    => $action,
+        args      => { },
+    );
+
+is valid
+
 =head1 ATTRIBUTES
 
 =head2 $MAP
@@ -348,6 +358,9 @@ sub callFriendlyLegacy {
 sub callFriendly {
     my $self            = shift;
     my $namedParameters = shift;
+    if (ref $namedParmeters ne 'HASH') {
+        $namedParameters = { @_ };
+    }
     my $action          = $namedParameters->{action};
     my $args            = $namedParameters->{args};
     my $authToken       = $namedParameters->{authToken};
