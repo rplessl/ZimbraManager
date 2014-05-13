@@ -321,6 +321,8 @@ main;
 
 __END__
 
+=pod
+
 =head1 NAME
 
 zimbra-manager-client.pl - a ZimbraManager Client written with Mojo::UserAgent

@@ -2,6 +2,8 @@ package ZimbraManager;
 
 use Mojo::Base 'Mojolicious';
 
+=pod
+
 =head1 NAME
 
 ZimbraManager - A Mojolicious application to manage Zimbra with SOAP

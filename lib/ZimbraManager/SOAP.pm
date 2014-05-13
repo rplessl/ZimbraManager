@@ -2,6 +2,8 @@ package ZimbraManager::SOAP;
 
 use Mojo::Base -base;
 
+=pod
+
 =head1 NAME
 
 ZimbraManager::SOAP - class to manage Zimbra with perl and SOAP

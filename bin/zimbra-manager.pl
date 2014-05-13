@@ -41,6 +41,8 @@ Mojolicious::Commands->start_app('ZimbraManager');
 
 __END__
 
+=pod
+
 =head1 NAME
 
 zimbra-manager.pl - A Zimbra managing tool written in perl / soap

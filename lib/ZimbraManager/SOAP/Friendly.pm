@@ -3,6 +3,8 @@ package ZimbraManager::SOAP::Friendly;
 use Mojo::Base 'ZimbraManager::SOAP';
 use Mojo::Util qw(dumper);
 
+=pod
+
 =head1 NAME
 
 ZimbraManager::SOAP::Friendly - class to manage Zimbra with perl and SOAP
