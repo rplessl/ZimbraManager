@@ -83,9 +83,8 @@ LICENSE
 --------
 LGPL license (see LICENSE)
 
-
 Contact info
 ------------
-Roman Plessl <roman.plessl@oetiker.ch> 
+Roman Plessl <roman@plessl.info>
 
-http://www.oetiker.ch/home/unternehmen/team/rp/
+http://roman.plessl.info/

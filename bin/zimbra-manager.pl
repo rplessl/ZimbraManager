@@ -9,6 +9,8 @@ use lib "$FindBin::Bin/../lib";
 use Getopt::Long qw(:config posix_default no_ignore_case);
 use Pod::Usage;
 
+my $VERSION = "0.15";
+
 my %opt;
 
 # Call GetOptions in BEGIN block as Mojo::Commands eats --help command line option
@@ -47,12 +49,18 @@ zimbra-manager.pl - A Zimbra managing tool written in perl / soap
 
 B<zimbra-manager.pl> [I<options>...]
 
-
      --man          show man-page and exit
      --help         display mojo applicaiton help and exit
      --logfile      Path to logfile
      --loglevel     Mojo Loglevel (info, warn, error, debug, ...)
 
+=head1 DESCRIPTION
+
+zimbra-manager.pl is a Zimbra SOAP / REST Interface service written
+in Mojolicious.
+
+This script will disable the SSL checkings in HTTPS communication, 
+so change that if you will be sure to have trusted connections.
 
 =head2 Usage
 
@@ -62,6 +70,14 @@ B<zimbra-manager.pl> [I<options>...]
 or
 
     $ ./bin/zimbra-manager.pl daemon
+
+=head1 SEE ALSO
+
+L<ZimbraManager::SOAP> L<ZimbraManager::SOAP::Friendly>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2014 by Roman Plessl. All rights reserved.
 
 =head1 LICENSE
 
@@ -80,7 +96,7 @@ this program.  If not, see L<http://www.gnu.org/licenses/>.
 
 =head1 AUTHOR
 
-S<Roman Plessl E<lt>roman.plessl@oetiker.chE<gt>>
+S<Roman Plessl E<lt>roman@plessl.infoE<gt>>
 
 =head1 HISTORY
 

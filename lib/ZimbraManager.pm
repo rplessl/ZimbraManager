@@ -23,7 +23,7 @@ use ZimbraManager::SOAP::Friendly;
 
 use HTTP::CookieJar::LWP;
 
-our $VERSION = "1.5";
+our $VERSION = "0.15";
 
 =head1 ATTRIBUTES
 
@@ -228,6 +228,10 @@ sub startup {
 
 __END__
 
+=head1 COPYRIGHT
+
+Copyright (c) 2014 by Roman Plessl. All rights reserved.
+
 =head1 LICENSE
 
 This program is free software: you can redistribute it and/or modify it
@@ -243,13 +247,9 @@ more details.
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see L<http://www.gnu.org/licenses/>.
 
-=head1 COPYRIGHT
-
-Copyright (c) 2014 by Roman Plessl. All rights reserved.
-
 =head1 AUTHOR
 
-S<Roman Plessl E<lt>roman.plessl@oetiker.chE<gt>>
+S<Roman Plessl E<lt>roman@plessl.infoE<gt>>
 
 =head1 HISTORY
 
