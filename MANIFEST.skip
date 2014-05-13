@@ -1,6 +1,6 @@
-*~
-zm.sublime-project
-zm.sublime-workspace
-etc/
-internal-test/
-thirdparty/
+^.*~$
+^zm.sublime-project$
+^zm.sublime-workspace$
+^etc/
+^internal-test/
+^thirdparty/

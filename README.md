@@ -81,7 +81,7 @@ An init.d and sysconfig configuration file is located in setup/rhel
 
 LICENSE
 --------
-LGPL license (see LICENSE)
+GPL 3 license (see LICENSE)
 
 Contact info
 ------------
