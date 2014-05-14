@@ -31,6 +31,7 @@ ZimbraManager::SOAP - class to manage Zimbra with perl and SOAP
     my ($ret, $err) = $self->soap->call($namedParameters);
 
 also
+
     $self->soap->call(
         action    => 'FUNCTIONNAME',
         args      => \%DATASTRUCTUREDPARAMS,
@@ -56,6 +57,8 @@ use XML::Compile::SOAP::Trace;
 use XML::Compile::Transport::SOAPHTTP;
 
 use HTTP::CookieJar::LWP;
+
+our $VERSION = "0.16";
 
 =head1 ATTRIBUTES
 
