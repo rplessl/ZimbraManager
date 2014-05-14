@@ -3,6 +3,8 @@ package ZimbraManager::SOAP::Friendly;
 use Mojo::Base 'ZimbraManager::SOAP';
 use Mojo::Util qw(dumper);
 
+our $VERSION = "0.16";
+
 =pod
 
 =head1 NAME
@@ -53,6 +55,82 @@ is valid
 This hash defines arguments and out-going (to Zimbra) and in-coming
 (from Zimbra) mapping subroutines for SOAP actions called with the
 callFriendly() method below.
+
+=head3 auth
+
+Input Arguments:
+
+    qw(password accountName)
+
+=head3 getAccountInfo
+
+Input Arguments:
+
+    qw(accountName)
+
+=head3 getAccount
+
+Input Arguments:
+
+    qw(accountName attribute?)
+
+optional attribute is a selector to a specific attribute. Otherwise
+all attributes are returned.
+
+=head3 getAllAccounts
+
+Input Arguments:
+
+    qw(serverName domainName)
+
+=head3 modifyAccount
+
+Input Arguments:
+
+    qw(zimbraUUID modifyKey modifyValue)
+
+=head3 getAllDomains
+
+Input Arguments:
+
+    qw()
+
+=head3 getDomainInfo
+
+Input Arguments:
+
+    qw(domainName)
+
+=head3 createAccount
+
+Input Arguments:
+
+      qw(uid defaultEmailDomain plainPassword givenName surName country displayName localeLang cosId)
+
+=head3 addAccountAlias
+
+Input Arguments:
+
+    qw(zimbraUUID emailAlias)
+
+=head3 removeAccountAlias
+
+Input Arguments:
+
+    qw(zimbraUUID emailAlias)
+
+=head3 deleteAccount
+
+Input Arguments:
+
+    qw(zimbraUUID)
+
+
+=head3 getCos
+
+Input Arguments:
+
+    qw(cosName)
 
 =cut
 
