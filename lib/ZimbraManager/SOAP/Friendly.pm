@@ -57,7 +57,7 @@ my $makeResponseParser = sub {
         my $a = $key ? $ret->{$key}{a} : $ret->{a};
         my $parsed = {};
         for my $elem (@$a) {
-            push @{$parsed->{$elem->{n}}, $elem->{'_'}; 
+            push @{$parsed->{$elem->{n}}}, $elem->{'_'}; 
         }
         return $parsed;
     }
@@ -421,7 +421,7 @@ sub callFriendlyLegacy {
 sub callFriendly {
     my $self            = shift;
     my $namedParameters = shift;
-    if (ref $namedParmeters ne 'HASH') {
+    if (ref $namedParameters ne 'HASH') {
         $namedParameters = { @_ };
     }
     my $action          = $namedParameters->{action};
