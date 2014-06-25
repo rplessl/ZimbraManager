@@ -34,15 +34,24 @@ Helper class for Zimbra adminstration with a user friendly interface
     };
     my ($ret, $err) = $self->soap->callFriendly($namedParameters);
 
-=head1 ATTRIBUTES
-
-=head2 $MAP
-
-This hash defines arguments and out-going (to Zimbra) and in-coming
-(from Zimbra) mapping subroutines for SOAP actions called with the
-callFriendly() method below.
-
 =cut
+
+my $makeResponseParser = sub {
+    my $key = shift;
+    return sub {
+        my $ret = shift;
+        my $a = $key ? $ret->{$key}{a} : $ret->{a};
+        my $parsed = {};
+        for my $elem (@$a) {
+            push @{$parsed->{$elem->{n}}, $elem->{'_'}; 
+        }
+        return $parsed;
+    }
+};
+
+# This hash defines arguments and out-going (to Zimbra) and in-coming
+# (from Zimbra) mapping subroutines for SOAP actions called with the
+# callFriendly() method below.
 
 my $MAP = {
     auth => {
@@ -70,15 +79,7 @@ my $MAP = {
                             _  => $accountName}
             };
         },
-        in  => sub {
-            my $ret = shift;
-            my $a   = $ret->{a};
-            my $parsed = {};
-            for my $elem (@$a) {
-                $parsed->{$elem->{n}} = $elem->{'_'};
-            }
-            return $parsed;
-        },
+        in  => $makeResponseParser->(),
     },
     getAccount => {
         args => [ qw(accountName attribute?) ],
@@ -100,17 +101,9 @@ my $MAP = {
             }
             return $argHash;
         },
-        in  => sub {
-            my $ret = shift;
-            # $ret->{account} is a hash with
-            # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
-            my $a = $ret->{account}->{a};
-            my $parsed = {};
-            for my $elem (@$a) {
-                $parsed->{$elem->{n}} = $elem->{'_'};
-            }
-            return $parsed;
-        },
+        # $ret->{account} is a hash with
+        # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
+        in  => $makeResponseParser->('account'),
     },
     getAllAccounts => {
         args => [ qw(serverName domainName)],
@@ -140,17 +133,9 @@ my $MAP = {
                         }
             };
         },
-        in  => sub {
-            my $ret = shift;
-            # $ret->{account} is a hash with
-            # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
-            my $a = $ret->{account}{a};
-            my $parsed = {};
-            for my $elem (@$a) {
-                $parsed->{$elem->{n}} = $elem->{'_'};
-            }
-            return $parsed;
-        },
+        # $ret->{account} is a hash with
+        # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
+        in  => $makeResponseParser->('account'),
     },
     getAllDomains => {
         args => [ ],
