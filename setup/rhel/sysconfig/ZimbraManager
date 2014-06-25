@@ -6,5 +6,8 @@ ZIMBRA_MANAGER_USER=zm_admin
 # Logfile directory
 ZIMBRA_MANAGER_LOGDIR=/var/log/ZimbraManager
 
+# LogLevel
+ZIMBRA_MANAGER_LOGLEVEL=error
+
 # Change Path
 PATH=/opt/oss/perl/bin:$PATH:$HOME/bin
