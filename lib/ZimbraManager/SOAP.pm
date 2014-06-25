@@ -2,6 +2,8 @@ package ZimbraManager::SOAP;
 
 use Mojo::Base -base;
 
+=pod
+
 =head1 NAME
 
 ZimbraManager::SOAP - class to manage Zimbra with perl and SOAP
@@ -28,6 +30,16 @@ ZimbraManager::SOAP - class to manage Zimbra with perl and SOAP
     };
     my ($ret, $err) = $self->soap->call($namedParameters);
 
+also
+
+    $self->soap->call(
+        action    => 'FUNCTIONNAME',
+        args      => \%DATASTRUCTUREDPARAMS,
+        authToken => $authToken,
+    );
+
+is valid
+
 =head1 DESCRIPTION
 
 Helper class for Zimbra adminstration interface.
@@ -45,6 +57,8 @@ use XML::Compile::SOAP::Trace;
 use XML::Compile::Transport::SOAPHTTP;
 
 use HTTP::CookieJar::LWP;
+
+our $VERSION = "0.16";
 
 =head1 ATTRIBUTES
 
@@ -352,6 +366,9 @@ sub callLegacy {
 sub call {
     my $self            = shift;
     my $namedParameters = shift;
+    if (ref $namedParmeters ne 'HASH') {
+        $namedParameters = { @_ };
+    }
     my $action          = $namedParameters->{action};
     my $args            = $namedParameters->{args};
     my $authToken       = $namedParameters->{authToken};
@@ -402,6 +419,10 @@ sub call {
 
 __END__
 
+=head1 COPYRIGHT
+
+Copyright (c) 2014 by Roman Plessl. All rights reserved.
+
 =head1 LICENSE
 
 This program is free software: you can redistribute it and/or modify it
@@ -417,13 +438,9 @@ more details.
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see L<http://www.gnu.org/licenses/>.
 
-=head1 COPYRIGHT
-
-Copyright (c) 2014 by Roman Plessl. All rights reserved.
-
 =head1 AUTHOR
 
-S<Roman Plessl E<lt>roman.plessl@oetiker.chE<gt>>
+S<Roman Plessl E<lt>roman@plessl.infoE<gt>>
 
 =head1 HISTORY
 

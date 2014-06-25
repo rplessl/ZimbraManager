@@ -6,7 +6,7 @@ ZIMBRA_MANAGER_USER=zm_admin
 # Logfile directory
 ZIMBRA_MANAGER_LOGDIR=/var/log/ZimbraManager
 
-# Loglevel
+# LogLevel
 ZIMBRA_MANAGER_LOGLEVEL=error
 
 # Change Path

@@ -1,0 +1,16 @@
+*~$
+zm.sublime-project$
+zm.sublime-workspace$
+^etc
+^internal-test
+^thirdparty
+^.git
+^blib
+.bak$
+MYMETA.json
+MYMETA.yml
+^Makefile$
+^Makefile.old$
+^pm_to_blib
+.gitignore
+MANIFEST.SKIP
