@@ -366,7 +366,7 @@ sub callLegacy {
 sub call {
     my $self            = shift;
     my $namedParameters = shift;
-    if (ref $namedParmeters ne 'HASH') {
+    if (ref $namedParameters ne 'HASH') {
         $namedParameters = { @_ };
     }
     my $action          = $namedParameters->{action};
