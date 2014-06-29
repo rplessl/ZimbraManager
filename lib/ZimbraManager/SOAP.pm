@@ -2,6 +2,8 @@ package ZimbraManager::SOAP;
 
 use Mojo::Base -base;
 
+=pod
+
 =head1 NAME
 
 ZimbraManager::SOAP - class to manage Zimbra with perl and SOAP
@@ -29,6 +31,7 @@ ZimbraManager::SOAP - class to manage Zimbra with perl and SOAP
     my ($ret, $err) = $self->soap->call($namedParameters);
 
 also
+
     $self->soap->call(
         action    => 'FUNCTIONNAME',
         args      => \%DATASTRUCTUREDPARAMS,
@@ -54,6 +57,8 @@ use XML::Compile::SOAP::Trace;
 use XML::Compile::Transport::SOAPHTTP;
 
 use HTTP::CookieJar::LWP;
+
+our $VERSION = "0.16";
 
 =head1 ATTRIBUTES
 
@@ -361,7 +366,7 @@ sub callLegacy {
 sub call {
     my $self            = shift;
     my $namedParameters = shift;
-    if (ref $namedParmeters ne 'HASH') {
+    if (ref $namedParameters ne 'HASH') {
         $namedParameters = { @_ };
     }
     my $action          = $namedParameters->{action};

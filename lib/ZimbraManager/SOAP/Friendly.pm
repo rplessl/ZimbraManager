@@ -3,6 +3,10 @@ package ZimbraManager::SOAP::Friendly;
 use Mojo::Base 'ZimbraManager::SOAP';
 use Mojo::Util qw(dumper);
 
+our $VERSION = "0.16";
+
+=pod
+
 =head1 NAME
 
 ZimbraManager::SOAP::Friendly - class to manage Zimbra with perl and SOAP
@@ -44,13 +48,111 @@ also
 
 is valid
 
-=head1 ATTRIBUTES
+=cut
 
-=head2 $MAP
+my $makeResponseParser = sub {
+    my $key = shift;
+    return sub {
+        my $ret = shift;
+        my $a = $key ? $ret->{$key}{a} : $ret->{a};
+        my $parsed = {};
+        for my $elem (@$a) {
+            push @{$parsed->{$elem->{n}}}, $elem->{'_'}; 
+        }
+        return $parsed;
+    }
+};
 
-This hash defines arguments and out-going (to Zimbra) and in-coming
-(from Zimbra) mapping subroutines for SOAP actions called with the
-callFriendly() method below.
+
+# This hash defines arguments and out-going (to Zimbra) and in-coming
+# (from Zimbra) mapping subroutines for SOAP actions called with the
+# callFriendly() method below.
+
+=head2 ACTIONS
+
+=head3 auth
+
+Input Arguments:
+
+    qw(password accountName)
+
+=head3 getAccountInfo
+
+Input Arguments:
+
+    qw(accountName)
+
+Return:
+    
+    a hash of arrays
+
+=head3 getAccount
+
+Input Arguments:
+
+    qw(accountName attribute?)
+
+optional attribute is a selector to a specific attribute. Otherwise
+all attributes are returned.
+
+Return:
+    
+    a hash of arrays
+
+=head3 getAllAccounts
+
+Input Arguments:
+
+    qw(serverName domainName)
+
+=head3 modifyAccount
+
+Input Arguments:
+
+    qw(zimbraUUID modifyKey modifyValue)
+
+=head3 getAllDomains
+
+Input Arguments:
+
+    qw()
+
+=head3 getDomainInfo
+
+Input Arguments:
+
+    qw(domainName)
+
+=head3 createAccount
+
+Input Arguments:
+
+      qw(uid defaultEmailDomain plainPassword givenName surName country displayName localeLang cosId)
+
+=head3 addAccountAlias
+
+Input Arguments:
+
+    qw(zimbraUUID emailAlias)
+
+=head3 removeAccountAlias
+
+Input Arguments:
+
+    qw(zimbraUUID emailAlias)
+
+=head3 deleteAccount
+
+Input Arguments:
+
+    qw(zimbraUUID)
+
+
+=head3 getCos
+
+Input Arguments:
+
+    qw(cosName)
 
 =cut
 
@@ -80,15 +182,7 @@ my $MAP = {
                             _  => $accountName}
             };
         },
-        in  => sub {
-            my $ret = shift;
-            my $a   = $ret->{a};
-            my $parsed = {};
-            for my $elem (@$a) {
-                $parsed->{$elem->{n}} = $elem->{'_'};
-            }
-            return $parsed;
-        },
+        in  => $makeResponseParser->(),
     },
     getAccount => {
         args => [ qw(accountName attribute?) ],
@@ -110,17 +204,9 @@ my $MAP = {
             }
             return $argHash;
         },
-        in  => sub {
-            my $ret = shift;
-            # $ret->{account} is a hash with
-            # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
-            my $a = $ret->{account}->{a};
-            my $parsed = {};
-            for my $elem (@$a) {
-                $parsed->{$elem->{n}} = $elem->{'_'};
-            }
-            return $parsed;
-        },
+        # $ret->{account} is a hash with
+        # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
+        in  => $makeResponseParser->('account'),
     },
     getAllAccounts => {
         args => [ qw(serverName domainName)],
@@ -134,6 +220,7 @@ my $MAP = {
                             _  => $domainName }
             };
         },
+        # no parsing for this one yet
         in  => sub {
             my $ret = shift;
             return $ret;
@@ -150,17 +237,9 @@ my $MAP = {
                         }
             };
         },
-        in  => sub {
-            my $ret = shift;
-            # $ret->{account} is a hash with
-            # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
-            my $a = $ret->{account}{a};
-            my $parsed = {};
-            for my $elem (@$a) {
-                $parsed->{$elem->{n}} = $elem->{'_'};
-            }
-            return $parsed;
-        },
+        # $ret->{account} is a hash with
+        # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
+        in  => $makeResponseParser->('account'),
     },
     getAllDomains => {
         args => [ ],
@@ -233,17 +312,9 @@ my $MAP = {
                 ],
             };
         },
-        in  => sub {
-            my $ret = shift;
-            # $ret->{account} is a hash with
-            # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
-            my $a = $ret->{account}{a};
-            my $parsed = {};
-            for my $elem (@$a) {
-                $parsed->{$elem->{n}} = $elem->{'_'};
-            }
-            return $parsed;
-        },
+        # $ret->{account} is a hash with
+        # keys 'a' (all account settings), 'id' (UUID), 'name' (email)
+        in  => $makeResponseParser->('account'),
     },
     addAccountAlias => {
         args => [ qw(zimbraUUID emailAlias) ],
@@ -306,17 +377,9 @@ my $MAP = {
 
 =head1 METHODS
 
-All the methods of L<Mojo::Base> plus:
-
-=head2 Private functions
-
-Private functions used in the startup function
-
-=head3 helperHashingAllAccounts
-
-Helper function for processing AllAccounts SOAP call
-
 =cut
+
+# Helper function for processing AllAccounts SOAP call
 
 my $helperHashingAllAccounts = sub {
     my $ret = shift;
@@ -358,7 +421,7 @@ sub callFriendlyLegacy {
 sub callFriendly {
     my $self            = shift;
     my $namedParameters = shift;
-    if (ref $namedParmeters ne 'HASH') {
+    if (ref $namedParameters ne 'HASH') {
         $namedParameters = { @_ };
     }
     my $action          = $namedParameters->{action};
@@ -422,6 +485,8 @@ sub callFriendly {
 __END__
 
 =head1 COPYRIGHT
+
+Copyright (c) 2014 by OETKER+PARTNER AG. 
 
 Copyright (c) 2014 by Roman Plessl. All rights reserved.
 Copyright (c) 2014 by OETIKER+PARTNER AG. 

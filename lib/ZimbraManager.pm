@@ -2,6 +2,8 @@ package ZimbraManager;
 
 use Mojo::Base 'Mojolicious';
 
+=pod
+
 =head1 NAME
 
 ZimbraManager - A Mojolicious application to manage Zimbra with SOAP
@@ -23,7 +25,7 @@ use ZimbraManager::SOAP::Friendly;
 
 use HTTP::CookieJar::LWP;
 
-our $VERSION = "0.15";
+our $VERSION = "0.16";
 
 =head1 ATTRIBUTES
 
