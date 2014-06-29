@@ -55,8 +55,7 @@ start() {
         RETVAL=$?
         echo
         [ $RETVAL -eq 0 ] && touch $lockfile
-        PID=`ps -ef | grep $executable | cut -d" " -f2`
-        PID=`echo $PID | cut -d" " -f2`
+        PID=`pgrep -fo $executable` 
         [ -n $PID ] && echo $PID > $pidfile
     fi
 }
