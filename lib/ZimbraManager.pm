@@ -231,6 +231,7 @@ __END__
 =head1 COPYRIGHT
 
 Copyright (c) 2014 by Roman Plessl. All rights reserved.
+Copyright (c) 2014 by OETIKER+PARTNER AG. 
 
 =head1 LICENSE
 

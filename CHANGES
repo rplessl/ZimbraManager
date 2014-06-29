@@ -1,3 +1,6 @@
+2014-06-29 - rplessl - Enhance and fix API as lesson learned by real world 
+                       usage
+
 2014-05-08 - rplessl - Changed Interface to named Parameter Interface
                        Added callLegacy() and callFriendlyLegacy() for old API
 
