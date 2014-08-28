@@ -303,16 +303,16 @@ my $MAP = {
                         },
                         $fromEmail ? (
                             {
-                                n => 'zimbraPrefFromAddress'
+                                n => 'zimbraPrefFromAddress',
                                 _ => $fromEmail,
                             },
                             {
-                                n => 'zimbraPrefFromAddressType'
+                                n => 'zimbraPrefFromAddressType',
                                 _ => 'sendAs',
                             },
                             {
-                                n => 'zimbraPrefFromDisplay'
-                                _ => $diplayName,
+                                n => 'zimbraPrefFromDisplay',
+                                _ => $displayName,
                             }
                         ) : (),
                         {
