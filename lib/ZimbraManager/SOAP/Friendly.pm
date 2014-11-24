@@ -127,7 +127,7 @@ Input Arguments:
 
 Input Arguments:
 
-      qw(uid defaultEmailDomain plainPassword givenName surName country displayName localeLang cosId)
+      qw(uid defaultEmailDomain plainPassword givenName surName country displayName localeLang cosId fromEmail?)
 
 =head3 addAccountAlias
 
@@ -274,9 +274,9 @@ my $MAP = {
         },
     },
     createAccount => {
-        args => [ qw(uid defaultEmailDomain plainPassword givenName surName country displayName localeLang cosId) ],
+        args => [ qw(uid defaultEmailDomain plainPassword givenName surName country displayName localeLang cosId fromEmail?) ],
         out  => sub {
-            my ($uid, $defaultEmailDomain, $plainPassword, $givenName, $surName, $country, $displayName, $localeLang, $cosId) = @_;
+            my ($uid, $defaultEmailDomain, $plainPassword, $givenName, $surName, $country, $displayName, $localeLang, $cosId, $fromEmail) = @_;
             return {
                 name     => $uid . '@' . $defaultEmailDomain,
                 password => $plainPassword,
@@ -301,6 +301,20 @@ my $MAP = {
                             n => 'zimbraPrefLocale',
                             _ => $localeLang,
                         },
+                        $fromEmail ? (
+                            {
+                                n => 'zimbraPrefFromAddress',
+                                _ => $fromEmail,
+                            },
+                            {
+                                n => 'zimbraPrefFromAddressType',
+                                _ => 'sendAs',
+                            },
+                            {
+                                n => 'zimbraPrefFromDisplay',
+                                _ => $displayName,
+                            }
+                        ) : (),
                         {
                             n => 'zimbraPasswordMustChange',
                             _ => 'FALSE',

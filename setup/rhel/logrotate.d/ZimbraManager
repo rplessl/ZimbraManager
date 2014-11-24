@@ -6,6 +6,6 @@
     rotate 7
     compress
     postrotate
-        /etc/init.d/ZimbraManager restart 2> /dev/null || true
+        /etc/init.d/ZimbraManager restart > /dev/null 2>&1 || true
     endscript
 }
