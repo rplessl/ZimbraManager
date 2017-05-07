@@ -3,7 +3,7 @@ package ZimbraManager::SOAP::Friendly;
 use Mojo::Base 'ZimbraManager::SOAP';
 use Mojo::Util qw(dumper);
 
-our $VERSION = "0.16";
+our $VERSION = "0.17";
 
 =pod
 
@@ -57,7 +57,7 @@ my $makeResponseParser = sub {
         my $a = $key ? $ret->{$key}{a} : $ret->{a};
         my $parsed = {};
         for my $elem (@$a) {
-            push @{$parsed->{$elem->{n}}}, $elem->{'_'}; 
+            push @{$parsed->{$elem->{n}}}, $elem->{'_'};
         }
         return $parsed;
     }
@@ -83,7 +83,7 @@ Input Arguments:
     qw(accountName)
 
 Return:
-    
+
     a hash of arrays
 
 =head3 getAccount
@@ -96,7 +96,7 @@ optional attribute is a selector to a specific attribute. Otherwise
 all attributes are returned.
 
 Return:
-    
+
     a hash of arrays
 
 =head3 getAllAccounts
@@ -249,6 +249,17 @@ my $MAP = {
         in  => sub {
             my $ret = shift;
             return $ret;
+        },
+    },
+    getQuotaUsage => {
+       args => [ ],
+       out  => sub {
+           return {};
+       },
+        in  => sub {
+            my $ret = shift;
+            my $accounts = $ret->{account};
+            return $accounts;
         },
     },
     getDomainInfo => {
@@ -419,19 +430,6 @@ Calls Zimbra with the given argument and returns the SOAP response as perl hash.
 
 =cut
 
-sub callFriendlyLegacy {
-    my $self      = shift;
-    my $authToken = shift;
-    my $action    = shift;
-    my $args      = shift;
-    my $namedParameters = {
-        action    => $action,
-        args      => $args,
-        authToken => $authToken,
-    };
-    return $self->callFriendly($namedParameters);
-}
-
 sub callFriendly {
     my $self            = shift;
     my $namedParameters = shift;
@@ -481,7 +479,8 @@ sub callFriendly {
         _function => 'ZimbraManager::Soap::callFriendly',
         action    =>$action,
         args      =>$args,
-        authToken =>$authToken
+        authToken =>$authToken,
+#	orderedArgs => $soapArgsBuild
     }));
 
     my ($ret, $err) = $self->call({
@@ -500,10 +499,9 @@ __END__
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014 by OETKER+PARTNER AG. 
-
-Copyright (c) 2014 by Roman Plessl. All rights reserved.
-Copyright (c) 2014 by OETIKER+PARTNER AG. 
+Copyright (c) 2014 by Roman Plessl.
+Copyright (c) 2014 by OETIKER+PARTNER AG.
+All rights reserved.
 
 =head1 LICENSE
 
@@ -523,10 +521,12 @@ this program.  If not, see L<http://www.gnu.org/licenses/>.
 =head1 AUTHOR
 
 S<Roman Plessl E<lt>roman@plessl.infoE<gt>>
+S<Fritz Zaucker E<lt>fritz.zaucker@oetiker.chE<gt>>
 
 =head1 HISTORY
 
  2014-04-29 rp Initial Version
+ 2015-01-15 fz Added getQuotaUsage
 
 =cut
 

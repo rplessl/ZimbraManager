@@ -58,7 +58,7 @@ use XML::Compile::Transport::SOAPHTTP;
 
 use HTTP::CookieJar::LWP;
 
-our $VERSION = "0.16";
+our $VERSION = "0.17";
 
 =head1 ATTRIBUTES
 
@@ -172,7 +172,7 @@ has 'wsdl' => sub {
     my $wsdlXml = $self->wsdlXml;
     my $wsdl = XML::Compile::WSDL11->new($wsdlXml);
     for my $xsd (glob $self->wsdlPath."*.xsd") {
-        $self->log->debug("XML Schema Import of file:", $xsd);
+        $self->log->debug("XML Schema Import of file: $xsd");
         $wsdl->importDefinitions($xsd);
     }
     return $wsdl;
@@ -266,7 +266,7 @@ has 'service' => sub {
     if ($self->log->level eq 'debug') {
         for my $servicename (keys %$zimbraServices) {
             for my $k (keys %{$zimbraServices->{$servicename}}) {
-                $self->log->debug("$k=", $zimbraServices->{$servicename}->{$k});
+                $self->log->debug("$k=" . $zimbraServices->{$servicename}->{$k});
             }
         }
     }
@@ -305,8 +305,8 @@ has 'transporter' => sub {
         ),
     );
 
-    $self->log->debug("LWP_SSL_VERIFY_HOSTNAME = $verifyHostname\n"
-                    . "LWP_SSL_VERIFY_MODE     = $verifyMode");
+    $self->log->debug("LWP_SSL_VERIFY_HOSTNAME = $verifyHostname");
+    $self->log->debug("LWP_SSL_VERIFY_MODE     = $verifyMode");
 
     return $transporter;
 };
@@ -350,18 +350,18 @@ Calls Zimbra with the given argument and returns the SOAP response as perl hash.
 
 =cut
 
-sub callLegacy {
-    my $self      = shift;
-    my $action    = shift;
-    my $args      = shift;
-    my $authToken = shift;
-    my $namedParameters = {
-        action    => $action,
-        args      => $args,
-        authToken => $authToken,
-    };
-    return $self->call($namedParameters);
-}
+# sub callLegacy {
+#     my $self      = shift;
+#     my $action    = shift;
+#     my $args      = shift;
+#     my $authToken = shift;
+#     my $namedParameters = {
+#         action    => $action,
+#         args      => $args,
+#         authToken => $authToken,
+#     };
+#     return $self->call($namedParameters);
+# }
 
 sub call {
     my $self            = shift;
@@ -421,8 +421,9 @@ __END__
 
 =head1 COPYRIGHT
 
-Copyright (c) 2014 by Roman Plessl. All rights reserved.
-Copyright (c) 2014 by OETIKER+PARTNER AG. 
+Copyright (c) 2014 by Roman Plessl.
+Copyright (c) 2014 by OETIKER+PARTNER AG.
+All rights reserved.
 
 =head1 LICENSE
 
@@ -442,12 +443,14 @@ this program.  If not, see L<http://www.gnu.org/licenses/>.
 =head1 AUTHOR
 
 S<Roman Plessl E<lt>roman@plessl.infoE<gt>>
+S<Fritz Zaucker E<lt>fritz.zaucker@oetiker.chE<gt>>
 
 =head1 HISTORY
 
  2014-03-20 rp Initial Version
  2014-03-27 rp Improved Error and SSL Handling
  2014-04-29 rp Improved API and Session Handing
+ 2017-02-24 fz Cleanup log output
 
 =cut
 
